@@ -40,6 +40,10 @@ function client(fetch: Fetch, overrides: { timeoutMs?: number; maxRetries?: numb
   });
 }
 
+/** A fetch that never answers; it only rejects (with the signal's reason) once the request is aborted. */
+const hangingFetch: Fetch = (_url, init) =>
+  new Promise((_resolve, reject) => init.signal?.addEventListener("abort", () => reject(init.signal?.reason)));
+
 /** A response shaped like Pegaroute's error envelope: `{ error: { … } }`. */
 function errorResponse(status: number, error: Record<string, unknown>, headers: Record<string, string> = {}): Response {
   return Response.json({ error }, { status, headers });
@@ -97,6 +101,26 @@ describe("HttpClient", () => {
     expect(calls).toHaveLength(2);
   });
 
+  test("retries GET after a network failure", async () => {
+    // Arrange: the first attempt fails at the network level, the second succeeds.
+    let attempts = 0;
+    const flakyFetch: Fetch = async () => {
+      attempts++;
+      // A real `fetch` rejects with a TypeError when no response arrives (e.g. "fetch failed" in Node,
+      // "Failed to fetch" in browsers). HTTP error statuses never throw; they resolve as responses.
+      if (attempts === 1) throw new TypeError("fetch failed");
+
+      return Response.json({ ok: true });
+    };
+
+    // Act
+    const result = await client(flakyFetch).request({ method: "GET", path: "/chains" });
+
+    // Assert: the ConnectionError was retried after backoff, and the second attempt's body is returned.
+    expect(result).toEqual({ ok: true });
+    expect(attempts).toBe(2);
+  });
+
   test("never retries POST", async () => {
     // Arrange: the same retryable 503, but on a POST.
     const { fetch, calls } = mockFetch(
@@ -130,17 +154,35 @@ describe("HttpClient", () => {
   });
 
   test("throws TimeoutError when the request exceeds timeoutMs", async () => {
-    // Arrange: a fetch that never answers, only rejects when aborted.
-    const hangingFetch: Fetch = (_url, init) =>
-      new Promise((_resolve, reject) => init.signal?.addEventListener("abort", () => reject(init.signal?.reason)));
-
-    // Act
+    // Act: the server never answers.
     const error = await client(hangingFetch, { timeoutMs: 20, maxRetries: 0 })
       .request({ method: "GET", path: "/chains" })
       .catch((e) => e);
 
     // Assert: after 20ms our timeout fires and becomes a TimeoutError.
     expect(error).toBeInstanceOf(TimeoutError);
+  });
+
+  test("propagates the caller's abort unchanged, without retrying", async () => {
+    // Arrange: count attempts, and have the caller cancel shortly after the request starts.
+    let attempts = 0;
+    const countingHangingFetch: Fetch = (url, init) => {
+      attempts++;
+      return hangingFetch(url, init);
+    };
+
+    const controller = new AbortController();
+    const reason = new Error("cancelled by caller");
+    setTimeout(() => controller.abort(reason), 10);
+
+    // Act
+    const error = await client(countingHangingFetch)
+      .request({ method: "GET", path: "/chains" }, { signal: controller.signal })
+      .catch((e) => e);
+
+    // Assert: the caller gets their own abort reason back (not a TimeoutError), after one attempt.
+    expect(error).toBe(reason);
+    expect(attempts).toBe(1);
   });
 
   test("keeps the real status when the connection drops while reading the body", async () => {
