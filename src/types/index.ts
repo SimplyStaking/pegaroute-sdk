@@ -53,4 +53,5 @@ export {
   type SwapExecution,
   type UtxoSwapExecution,
 } from "./execution.js";
+export type { GetQuoteParams, QuoteResponse, QuoteRoute, RouteWarning } from "./quotes.js";
 export { type InternalSwapStatus, isTerminalStatus, type SwapStatus, toExternalStatus } from "./status.js";

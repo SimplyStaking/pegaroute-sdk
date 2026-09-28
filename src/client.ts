@@ -1,6 +1,7 @@
 import { type Fetch, HttpClient, type RequestOptions } from "./core/http.js";
 import { Chains } from "./resources/chains.js";
 import { Providers } from "./resources/providers.js";
+import { Quotes } from "./resources/quotes.js";
 import { Tokens } from "./resources/tokens.js";
 import type { HealthResponse, PingResponse } from "./types/discovery.js";
 
@@ -39,6 +40,9 @@ export class Pegaroute {
 
   /** Swap providers and their status. */
   readonly providers: Providers;
+
+  /** Swap quotes. */
+  readonly quotes: Quotes;
 
   constructor(options: PegarouteOptions) {
     const { apiKey, baseUrl, timeoutMs = DEFAULT_TIMEOUT_MS, maxRetries = DEFAULT_MAX_RETRIES } = options;
@@ -81,6 +85,7 @@ export class Pegaroute {
     this.chains = new Chains(this.http);
     this.tokens = new Tokens(this.http);
     this.providers = new Providers(this.http);
+    this.quotes = new Quotes(this.http);
   }
 
   /**
