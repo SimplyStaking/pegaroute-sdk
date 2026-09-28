@@ -1,14 +1,23 @@
-import { type Fetch, HttpClient } from "./core/http.js";
+import { type Fetch, HttpClient, type RequestOptions } from "./core/http.js";
+import { Chains } from "./resources/chains.js";
+import { Providers } from "./resources/providers.js";
+import { Tokens } from "./resources/tokens.js";
+import type { HealthResponse, PingResponse } from "./types/discovery.js";
 
+/** Settings for a {@link Pegaroute} client. */
 export interface PegarouteOptions {
   /** Integration API key. Keep it server-side. */
   apiKey: string;
+
   /** Pegaroute API base URL, e.g. `https://api.pegaroute.com`. */
   baseUrl: string;
+
   /** Per-request timeout. Default 30 000 ms. */
   timeoutMs?: number;
+
   /** Retries for GET requests on 429, 503 and connection errors. Default 2. */
   maxRetries?: number;
+
   /** Custom `fetch` implementation (tests, proxies). Default `globalThis.fetch`. */
   fetch?: Fetch;
 }
@@ -21,6 +30,15 @@ let browserWarningShown = false;
 /** Pegaroute API client. Server-side only: it holds your API key. */
 export class Pegaroute {
   protected readonly http: HttpClient;
+
+  /** Supported chains. */
+  readonly chains: Chains;
+
+  /** Supported tokens per chain. */
+  readonly tokens: Tokens;
+
+  /** Swap providers and their status. */
+  readonly providers: Providers;
 
   constructor(options: PegarouteOptions) {
     const { apiKey, baseUrl, timeoutMs = DEFAULT_TIMEOUT_MS, maxRetries = DEFAULT_MAX_RETRIES } = options;
@@ -58,6 +76,35 @@ export class Pegaroute {
       // Wrapped so runtimes that require `this === globalThis` don't throw "Illegal invocation".
       fetch: (url, init) => fetchImpl(url, init),
     });
+
+    // Resource namespaces share the one HTTP client.
+    this.chains = new Chains(this.http);
+    this.tokens = new Tokens(this.http);
+    this.providers = new Providers(this.http);
+  }
+
+  /**
+   * Returns Pegaroute's health: database, write-ahead log and every provider.
+   *
+   * Unlike other methods, this does not throw when Pegaroute answers 503 because its database is down:
+   * it returns the body with `status: "degraded"` instead. Other failures (401, timeouts, …) still throw.
+   *
+   * @example
+   * const health = await pr.health();
+   * if (health.status === "degraded") alert(health);
+   */
+  health(options?: RequestOptions): Promise<HealthResponse> {
+    return this.http.request({ method: "GET", path: "/health", successStatuses: [503] }, options);
+  }
+
+  /**
+   * Checks that Pegaroute is reachable.
+   *
+   * @example
+   * await pr.ping(); // { response: "pong", timestamp: "…", service: "pegaroute" }
+   */
+  ping(options?: RequestOptions): Promise<PingResponse> {
+    return this.http.request({ method: "GET", path: "/ping" }, options);
   }
 }
 

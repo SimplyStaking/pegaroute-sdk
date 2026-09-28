@@ -1,4 +1,10 @@
-import { ConnectionError, errorFromResponse, PegarouteError, TimeoutError } from "./errors.js";
+import {
+  ConnectionError,
+  errorFromResponse,
+  isPegarouteErrorEnvelope,
+  PegarouteError,
+  TimeoutError,
+} from "./errors.js";
 
 /** Per-call options accepted by every SDK method. */
 export interface RequestOptions {
@@ -44,6 +50,12 @@ export interface HttpRequest {
 
   /** JSON body; serialised with `JSON.stringify`. */
   body?: unknown;
+
+  /**
+   * Non-2xx statuses that still carry a normal response body, e.g. `/health` answers 503 when degraded.
+   * That body is returned (never retried) unless it isn't JSON or is an error envelope, which are handled as usual.
+   */
+  successStatuses?: number[];
 }
 
 /** HTTP statuses worth retrying: rate limited, or temporarily unavailable. */
@@ -84,6 +96,13 @@ export class HttpClient {
 
       // Success: return the parsed JSON body.
       if (response.ok) return parseJson<T>(response, bodyText);
+
+      // Some endpoints report their state with a non-2xx status and a normal body (e.g. `/health` → 503).
+      // Return that body, unless it is actually an error: not JSON (e.g. a proxy page) or Pegaroute's error envelope.
+      if (request.successStatuses?.includes(response.status)) {
+        const body = tryParseJson(bodyText);
+        if (body !== undefined && !isPegarouteErrorEnvelope(body)) return body as T;
+      }
 
       // Failure: build the typed error, then decide whether this status is worth another attempt.
       const error = errorFromResponse(response, bodyText);
@@ -180,6 +199,15 @@ function parseJson<T>(response: Response, bodyText: string): T {
       details: { body: bodyText.slice(0, 500) },
       cause,
     });
+  }
+}
+
+/** Parses JSON, returning `undefined` instead of throwing when the text isn't valid JSON. */
+function tryParseJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
   }
 }
 

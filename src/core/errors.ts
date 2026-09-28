@@ -174,7 +174,7 @@ interface PegarouteErrorEnvelope {
 }
 
 /** Checks that a parsed body looks like an {@link PegarouteErrorEnvelope} (e.g. not a proxy's HTML error page). */
-function isPegarouteErrorEnvelope(value: unknown): value is PegarouteErrorEnvelope {
+export function isPegarouteErrorEnvelope(value: unknown): value is PegarouteErrorEnvelope {
   if (typeof value !== "object" || value === null) return false;
 
   const error = (value as { error?: unknown }).error;

@@ -213,4 +213,37 @@ describe("HttpClient", () => {
     expect(error).toBeInstanceOf(PegarouteError);
     expect(error).toMatchObject({ code: "INVALID_RESPONSE", status: 200 });
   });
+
+  test("returns the body for a success status like /health's 503, without retrying", async () => {
+    // Arrange: a degraded health body sent with 503.
+    const { fetch, calls } = mockFetch(Response.json({ status: "degraded" }, { status: 503 }));
+
+    // Act
+    const result = await client(fetch).request({ method: "GET", path: "/health", successStatuses: [503] });
+
+    // Assert: body returned after a single attempt.
+    expect(result).toEqual({ status: "degraded" });
+    expect(calls).toHaveLength(1);
+  });
+
+  test("still retries, then throws, when a success status carries an error envelope", async () => {
+    // Arrange: a real 503 error from the server twice, on an endpoint that accepts 503 bodies.
+    const error503 = () =>
+      errorResponse(
+        503,
+        { code: "CHAIN_HALTED", message: "halted", userMessage: "Chain halted", retryable: false },
+        { "Retry-After": "0" },
+      );
+    const { fetch, calls } = mockFetch(error503(), error503());
+
+    // Act: allow one retry.
+    const error = await client(fetch, { maxRetries: 1 })
+      .request({ method: "GET", path: "/health", successStatuses: [503] })
+      .catch((e) => e);
+
+    // Assert: handled like any 503, i.e. retried once, then thrown.
+    expect(calls).toHaveLength(2);
+    expect(error).toBeInstanceOf(ServiceUnavailableError);
+    expect(error).toMatchObject({ code: "CHAIN_HALTED", status: 503 });
+  });
 });

@@ -12,6 +12,23 @@ export type {
   StreamingProgress,
   TokenAmount,
 } from "./common.js";
+export type {
+  Chain,
+  ChainsResponse,
+  HealthResponse,
+  KnownProviderType,
+  ListProvidersParams,
+  PingResponse,
+  ProviderAffiliateFeeStructure,
+  ProviderFeeStructure,
+  ProviderHealth,
+  ProviderInfo,
+  ProvidersResponse,
+  ProviderTakeStructure,
+  ProviderType,
+  Token,
+  TokensResponse,
+} from "./discovery.js";
 export {
   type CosmosBankSendSwapExecution,
   type CosmosMsgDepositSwapExecution,
