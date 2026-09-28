@@ -1,2 +1,39 @@
 // Browser-safe entry: types and type guards only. Never import the client here.
 export type { ErrorCode, KnownErrorCode } from "../core/errors.js";
+export type {
+  AffiliateFeeBreakdown,
+  KnownProvider,
+  OpenOceanRouteMeta,
+  PrivateSwapMode,
+  Provider,
+  QuoteFees,
+  RefundInfo,
+  RouteInfo,
+  StreamingProgress,
+  TokenAmount,
+} from "./common.js";
+export {
+  type CosmosBankSendSwapExecution,
+  type CosmosMsgDepositSwapExecution,
+  type CosmosMsgExecuteSwapExecution,
+  type EvmApproval,
+  type EvmSwapExecution,
+  type ExecutionFamily,
+  type ExecutionMode,
+  type ExecutionOfFamily,
+  type ExecutionOfMode,
+  isCosmosExecution,
+  isEvmExecution,
+  isExecutionFamily,
+  isExecutionMode,
+  isSolanaExecution,
+  isSuiExecution,
+  isUtxoExecution,
+  type JsonSwapExecution,
+  type NamedDepositSwapExecution,
+  type OtherDepositSwapExecution,
+  type SerializedSwapExecution,
+  type SwapExecution,
+  type UtxoSwapExecution,
+} from "./execution.js";
+export { type InternalSwapStatus, isTerminalStatus, type SwapStatus, toExternalStatus } from "./status.js";
