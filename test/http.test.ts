@@ -231,7 +231,7 @@ describe("HttpClient", () => {
     const error503 = () =>
       errorResponse(
         503,
-        { code: "CHAIN_HALTED", message: "halted", userMessage: "Chain halted", retryable: false },
+        { code: "PROVIDER_UNAVAILABLE", message: "down", userMessage: "Unavailable", retryable: true },
         { "Retry-After": "0" },
       );
     const { fetch, calls } = mockFetch(error503(), error503());
@@ -244,6 +244,23 @@ describe("HttpClient", () => {
     // Assert: handled like any 503, i.e. retried once, then thrown.
     expect(calls).toHaveLength(2);
     expect(error).toBeInstanceOf(ServiceUnavailableError);
-    expect(error).toMatchObject({ code: "CHAIN_HALTED", status: 503 });
+    expect(error).toMatchObject({ code: "PROVIDER_UNAVAILABLE", status: 503 });
+  });
+
+  test("does not retry a 503 whose error body says retryable: false", async () => {
+    // Arrange: a disabled chain, which the server marks as not worth retrying.
+    const { fetch, calls } = mockFetch(
+      errorResponse(503, { code: "CHAIN_DISABLED", message: "disabled", retryable: false }, { "Retry-After": "0" }),
+    );
+
+    // Act: retries are allowed, but the server's flag should win.
+    const error = await client(fetch)
+      .request({ method: "GET", path: "/quote" })
+      .catch((e) => e);
+
+    // Assert: thrown after a single attempt.
+    expect(calls).toHaveLength(1);
+    expect(error).toBeInstanceOf(ServiceUnavailableError);
+    expect(error).toMatchObject({ code: "CHAIN_DISABLED", retryable: false });
   });
 });

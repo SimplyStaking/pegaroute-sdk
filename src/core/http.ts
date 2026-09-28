@@ -108,6 +108,9 @@ export class HttpClient {
       const error = errorFromResponse(response, bodyText);
       if (attempt >= maxRetries || !RETRYABLE_STATUSES.has(response.status)) throw error;
 
+      // The server can rule a retry out, e.g. a disabled chain answers 503 with `retryable: false` in its error body.
+      if (serverForbidsRetry(bodyText)) throw error;
+
       // Get the amount of time to wait before retrying. This considers the `Retry-After` header and exponential backoff as fallback.
       const delayMs = retryDelayMs(response, error, attempt);
       if (delayMs === null) throw error;
@@ -209,6 +212,15 @@ function tryParseJson(text: string): unknown {
   } catch {
     return undefined;
   }
+}
+
+/**
+ * Whether the body is Pegaroute's error envelope with an explicit `retryable: false`.
+ * A body without the envelope (e.g. a proxy page) or without the flag doesn't forbid a retry.
+ */
+function serverForbidsRetry(bodyText: string): boolean {
+  const body = tryParseJson(bodyText);
+  return isPegarouteErrorEnvelope(body) && body.error.retryable === false;
 }
 
 /** Retry-After (header, then body) wins; `null` means the wait is too long to retry. */
