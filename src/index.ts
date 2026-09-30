@@ -10,6 +10,7 @@ export {
   NotFoundError,
   PegarouteError,
   PermissionDeniedError,
+  ProviderChangedError,
   QuoteExpiredError,
   RateLimitError,
   ServiceUnavailableError,

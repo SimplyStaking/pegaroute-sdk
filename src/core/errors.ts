@@ -1,3 +1,5 @@
+import type { QuoteResponse } from "../types/quotes.js";
+
 /** Error codes Pegaroute is known to return. Other strings may appear as the API evolves. */
 export type KnownErrorCode =
   // Server-side error codes returned by the Pegaroute API.
@@ -107,6 +109,46 @@ export class PermissionDeniedError extends PegarouteError {}
 export class NotFoundError extends PegarouteError {}
 export class ConflictError extends PegarouteError {}
 
+/** The data needed to create a {@link ProviderChangedError}: the base fields plus the refreshed quote. */
+export interface ProviderChangedErrorInit extends PegarouteErrorInit {
+  /** The refreshed quote to review and retry with. */
+  newQuote: QuoteResponse;
+
+  /** The provider that was quoted (or requested with `routeProvider`). */
+  originalProvider: string;
+
+  /** The best provider under the refreshed quote. */
+  newProvider: string;
+}
+
+/**
+ * The quoted route is no longer available, so Pegaroute quoted again (HTTP 409, `PROVIDER_CHANGED`).
+ * The original `quoteId` is used up: show the user `newQuote` and call `swaps.create` again with its `quoteId`.
+ *
+ * @example
+ * catch (e) {
+ *   if (e instanceof ProviderChangedError) retryWith(e.newQuote);
+ * }
+ */
+export class ProviderChangedError extends ConflictError {
+  /** The refreshed quote to review and retry with. */
+  readonly newQuote: QuoteResponse;
+
+  /** The provider that was quoted (or requested with `routeProvider`). */
+  readonly originalProvider: string;
+
+  /** The best provider under the refreshed quote. */
+  readonly newProvider: string;
+
+  constructor(init: ProviderChangedErrorInit) {
+    super(init);
+
+    this.newQuote = init.newQuote;
+    this.originalProvider = init.originalProvider;
+    this.newProvider = init.newProvider;
+  }
+}
+
 /** The quote is no longer valid; request a new one. */
 export class QuoteExpiredError extends PegarouteError {}
 export class UnprocessableEntityError extends PegarouteError {}
@@ -184,6 +226,30 @@ export function isPegarouteErrorEnvelope(value: unknown): value is PegarouteErro
   return typeof code === "string" && typeof message === "string";
 }
 
+/**
+ * The extra top-level fields of a 409 `PROVIDER_CHANGED` body, next to the usual `error` envelope.
+ *
+ * @example
+ * { "error": { "code": "PROVIDER_CHANGED", … }, "newQuote": { "quoteId": "…", … }, "originalProvider": "maya", "newProvider": "thorchain" }
+ */
+interface ProviderChangedBody {
+  newQuote: QuoteResponse;
+  originalProvider: string;
+  newProvider: string;
+}
+
+/** Checks that a 409 body carries the refreshed quote and both provider names. */
+function isProviderChangedBody(value: object): value is ProviderChangedBody {
+  const { newQuote, originalProvider, newProvider } = value as Record<string, unknown>;
+
+  return (
+    typeof newQuote === "object" &&
+    newQuote !== null &&
+    typeof originalProvider === "string" &&
+    typeof newProvider === "string"
+  );
+}
+
 /** Builds the matching error subclass from a non-2xx response and its (already read) body text. */
 export function errorFromResponse(response: Response, bodyText: string): PegarouteError {
   // Determine the appropriate error class based on the HTTP status code.
@@ -211,7 +277,7 @@ export function errorFromResponse(response: Response, bodyText: string): Pegarou
 
   // At this point, we know the body is a valid Pegaroute error envelope, so we can safely extract the `error` object.
   const { error } = body;
-  return new ErrorClass({
+  const init: PegarouteErrorInit = {
     code: error.code,
     status: response.status,
     message: error.message,
@@ -220,5 +286,17 @@ export function errorFromResponse(response: Response, bodyText: string): Pegarou
     retryAfterSeconds: error.retryAfterSeconds ?? null,
     ...(error.provider !== undefined && { provider: error.provider }),
     ...(error.details !== undefined && { details: error.details }),
-  });
+  };
+
+  // A changed provider carries a refreshed quote to retry with. Without it, fall back to a plain `ConflictError`.
+  if (response.status === 409 && error.code === "PROVIDER_CHANGED" && isProviderChangedBody(body)) {
+    return new ProviderChangedError({
+      ...init,
+      newQuote: body.newQuote,
+      originalProvider: body.originalProvider,
+      newProvider: body.newProvider,
+    });
+  }
+
+  return new ErrorClass(init);
 }

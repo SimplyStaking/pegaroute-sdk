@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
+  ConflictError,
   ConnectionError,
   PegarouteError,
+  ProviderChangedError,
   QuoteExpiredError,
   ServiceUnavailableError,
   TimeoutError,
@@ -83,6 +85,38 @@ describe("HttpClient", () => {
     // Assert: the 410 becomes a QuoteExpiredError carrying the envelope's fields.
     expect(error).toBeInstanceOf(QuoteExpiredError);
     expect(error).toMatchObject({ code: "QUOTE_EXPIRED", status: 410, userMessage: "Quote expired", retryable: false });
+  });
+
+  test("maps a 409 PROVIDER_CHANGED to ProviderChangedError with the refreshed quote", async () => {
+    // Arrange: Pegaroute's 409 body, with the new quote and providers next to the error envelope.
+    const newQuote = { quoteId: "q-2", expiresAt: "2026-09-30T12:00:00.000Z", routes: [], warnings: [] };
+    const { fetch } = mockFetch(
+      Response.json(
+        {
+          error: { code: "PROVIDER_CHANGED", message: "changed", userMessage: "Route changed", retryable: false },
+          newQuote,
+          originalProvider: "maya",
+          newProvider: "thorchain",
+        },
+        { status: 409 },
+      ),
+    );
+
+    // Act
+    const error = await client(fetch)
+      .request({ method: "POST", path: "/swap", body: {} })
+      .catch((e) => e);
+
+    // Assert: a ConflictError subclass carrying the refreshed quote and both providers.
+    expect(error).toBeInstanceOf(ProviderChangedError);
+    expect(error).toBeInstanceOf(ConflictError);
+    expect(error).toMatchObject({
+      code: "PROVIDER_CHANGED",
+      status: 409,
+      newQuote,
+      originalProvider: "maya",
+      newProvider: "thorchain",
+    });
   });
 
   test("retries GET on 503 honouring Retry-After", async () => {
