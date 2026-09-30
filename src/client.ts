@@ -4,6 +4,7 @@ import { Providers } from "./resources/providers.js";
 import { Quotes } from "./resources/quotes.js";
 import { Swaps } from "./resources/swaps.js";
 import { Tokens } from "./resources/tokens.js";
+import { Transactions } from "./resources/transactions.js";
 import type { HealthResponse, PingResponse } from "./types/discovery.js";
 
 /** Settings for a {@link Pegaroute} client. */
@@ -48,6 +49,9 @@ export class Pegaroute {
   /** Swap creation and tracking. */
   readonly swaps: Swaps;
 
+  /** Swap history for your integration. */
+  readonly transactions: Transactions;
+
   constructor(options: PegarouteOptions) {
     const { apiKey, baseUrl, timeoutMs = DEFAULT_TIMEOUT_MS, maxRetries = DEFAULT_MAX_RETRIES } = options;
 
@@ -91,6 +95,7 @@ export class Pegaroute {
     this.providers = new Providers(this.http);
     this.quotes = new Quotes(this.http);
     this.swaps = new Swaps(this.http);
+    this.transactions = new Transactions(this.http);
   }
 
   /**

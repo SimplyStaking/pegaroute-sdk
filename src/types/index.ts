@@ -72,3 +72,10 @@ export type {
   SwapProviderInfo,
   SwapTimestamps,
 } from "./swaps.js";
+export type {
+  CursorPagination,
+  ExpectedAffiliateEntry,
+  ListTransactionsParams,
+  Transaction,
+  TransactionsResponse,
+} from "./transactions.js";
