@@ -5,6 +5,7 @@ import {
   PegarouteError,
   TimeoutError,
 } from "./errors.js";
+import { assertIntegerAtLeast } from "./validation.js";
 
 /** Per-call options accepted by every SDK method. */
 export interface RequestOptions {
@@ -78,6 +79,9 @@ export class HttpClient {
 
   /** Sends a request, retrying GETs on 429/503/connection errors. */
   async request<T>(request: HttpRequest, options: RequestOptions = {}): Promise<T> {
+    // Validate the per-call timeout before sending anything (the client's default was checked at construction).
+    if (options.timeoutMs !== undefined) assertIntegerAtLeast("timeoutMs", options.timeoutMs, 1);
+
     // Only GETs are safe to repeat; a retried POST /swap could create a duplicate swap. Even though this is safe in Pegasus as the user only signs one swap at a time, we still enforce this rule to prevent accidental duplicate requests.
     const maxRetries = request.method === "GET" ? this.#config.maxRetries : 0;
 

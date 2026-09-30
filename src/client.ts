@@ -1,4 +1,5 @@
 import { type Fetch, HttpClient, type RequestOptions } from "./core/http.js";
+import { assertIntegerAtLeast } from "./core/validation.js";
 import { Chains } from "./resources/chains.js";
 import { Providers } from "./resources/providers.js";
 import { Quotes } from "./resources/quotes.js";
@@ -67,11 +68,9 @@ export class Pegaroute {
       throw new TypeError("Pegaroute: `baseUrl` must be an absolute URL");
     }
 
-    if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new TypeError("Pegaroute: `timeoutMs` must be > 0");
+    assertIntegerAtLeast("timeoutMs", timeoutMs, 1);
 
-    if (!Number.isInteger(maxRetries) || maxRetries < 0) {
-      throw new TypeError("Pegaroute: `maxRetries` must be an integer >= 0");
-    }
+    assertIntegerAtLeast("maxRetries", maxRetries, 0);
 
     const fetchImpl: Fetch | undefined = options.fetch ?? globalThis.fetch;
     if (typeof fetchImpl !== "function") throw new TypeError("Pegaroute: no `fetch` available; pass `options.fetch`");

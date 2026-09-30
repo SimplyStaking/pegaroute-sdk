@@ -71,6 +71,21 @@ describe("HttpClient", () => {
     expect(new Headers(call?.init.headers).get("X-API-Key")).toBe("pegasus-test");
   });
 
+  test("rejects an invalid per-call timeout with a RangeError, before sending anything", async () => {
+    // Arrange: a fetch that would answer, if it were ever called.
+    const { fetch, calls } = mockFetch(Response.json({ ok: true }));
+
+    // Act: a fractional timeout, which `AbortSignal.timeout` would otherwise reject with Node's own error.
+    const error = await client(fetch)
+      .request({ method: "GET", path: "/chains" }, { timeoutMs: 1500.5 })
+      .catch((e) => e);
+
+    // Assert: our RangeError, and no request made.
+    expect(error).toBeInstanceOf(RangeError);
+    expect(error).toMatchObject({ message: "Pegaroute: `timeoutMs` must be a whole number, received 1500.5" });
+    expect(calls).toHaveLength(0);
+  });
+
   test("maps the error envelope to the matching subclass", async () => {
     // Arrange: a 410 QUOTE_EXPIRED error from the server.
     const { fetch } = mockFetch(
