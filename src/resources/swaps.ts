@@ -1,4 +1,8 @@
+import { WaitTimeoutError } from "../core/errors.js";
 import type { HttpClient, RequestOptions } from "../core/http.js";
+import { pollUntil } from "../core/polling.js";
+import { assertIntegerAtLeast } from "../core/validation.js";
+import { isTerminalStatus } from "../types/status.js";
 import type {
   CreateSwapParams,
   CreateSwapResponse,
@@ -7,6 +11,30 @@ import type {
   SubmitTxHashResponse,
   SwapEventsResponse,
 } from "../types/swaps.js";
+
+/** Default wait between polls: Pegaroute refreshes a swap every 15 s, and rate limits at 10 requests/s. */
+const DEFAULT_POLL_INTERVAL_MS = 10_000;
+
+/** Minimum polling interval: Polling faster than this only spends the rate limit: Pegaroute won't have anything new due to caching. */
+const MIN_POLL_INTERVAL_MS = 1_000;
+
+/** Default deadline for the whole wait: long enough for slow streaming swaps. */
+const DEFAULT_WAIT_TIMEOUT_MS = 3_600_000;
+
+/** Options for {@link Swaps.waitForCompletion}. */
+export interface WaitForCompletionOptions {
+  /** Wait between polls in milliseconds. Default 10 000; at least 1 000. */
+  intervalMs?: number;
+
+  /**
+   * Deadline for the whole wait in milliseconds, after which `WaitTimeoutError` is thrown. Default 3 600 000 (1 hour).
+   * Each poll still uses the client's own per-request `timeoutMs`.
+   */
+  timeoutMs?: number;
+
+  /** Stops waiting (and cancels the poll in flight); the signal's reason is thrown. */
+  signal?: AbortSignal;
+}
 
 /** Swap creation and tracking. Available as `pr.swaps`. */
 export class Swaps {
@@ -65,6 +93,47 @@ export class Swaps {
    */
   get(transactionId: string, options?: RequestOptions): Promise<GetSwapResponse> {
     return this.#http.request({ method: "GET", path: `/swap/${encodeURIComponent(transactionId)}` }, options);
+  }
+
+  /**
+   * Polls `swaps.get` until the swap reaches a terminal status (`success` or `fail`), then returns it.
+   * Webhooks are the better fit for production; use this as a fallback or in scripts.
+   *
+   * Throws `WaitTimeoutError` (with the last swap seen) if `timeoutMs` passes first. A failing poll is thrown
+   * unchanged, after `swaps.get`'s own retries.
+   *
+   * @example
+   * const final = await pr.swaps.waitForCompletion(swap.transactionId);
+   * if (final.status === "fail") console.log(final.error?.userMessage, final.refund);
+   */
+  async waitForCompletion(transactionId: string, options: WaitForCompletionOptions = {}): Promise<GetSwapResponse> {
+    const { intervalMs = DEFAULT_POLL_INTERVAL_MS, timeoutMs = DEFAULT_WAIT_TIMEOUT_MS, signal } = options;
+
+    // Validate options before sending anything.
+    assertIntegerAtLeast("intervalMs", intervalMs, MIN_POLL_INTERVAL_MS);
+    assertIntegerAtLeast("timeoutMs", timeoutMs, 1);
+
+    return pollUntil({
+      fetch: (pollSignal) => this.get(transactionId, { signal: pollSignal }),
+
+      isDone: (swap) => isTerminalStatus(swap.status),
+
+      intervalMs,
+
+      timeoutMs,
+
+      signal,
+
+      timeoutError: (lastSwap) =>
+        new WaitTimeoutError({
+          code: "WAIT_TIMEOUT",
+          status: null,
+          message: `Swap ${transactionId} did not reach a terminal status within ${timeoutMs}ms`,
+          userMessage: "The swap is taking longer than expected. Check its status again later.",
+          retryable: false,
+          lastSwap,
+        }),
+    });
   }
 
   /**

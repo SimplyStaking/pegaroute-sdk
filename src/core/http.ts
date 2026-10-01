@@ -261,7 +261,7 @@ function backoffMs(attempt: number): number {
 }
 
 /** Waits `ms`, but stops early (rejecting) if the caller's signal aborts. */
-function sleep(ms: number, signal: AbortSignal | undefined): Promise<void> {
+export function sleep(ms: number, signal: AbortSignal | undefined): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) return reject(signal.reason);
 

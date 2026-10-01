@@ -1,4 +1,5 @@
 import type { QuoteResponse } from "../types/quotes.js";
+import type { GetSwapResponse } from "../types/swaps.js";
 
 /** Error codes Pegaroute is known to return. Other strings may appear as the API evolves. */
 export type KnownErrorCode =
@@ -29,6 +30,7 @@ export type KnownErrorCode =
   | "CONNECTION_ERROR"
   | "TIMEOUT"
   | "INVALID_RESPONSE"
+  | "WAIT_TIMEOUT"
   | "UNKNOWN_ERROR";
 
 // Any error code, including unknown ones returned by the API as it evolves.
@@ -167,6 +169,34 @@ export class ConnectionError extends PegarouteError {}
 /** The request did not complete within the configured timeout. */
 export class TimeoutError extends ConnectionError {}
 
+/** The data needed to create a {@link WaitTimeoutError}: the base fields plus the last swap seen. */
+export interface WaitTimeoutErrorInit extends PegarouteErrorInit {
+  /** The most recent successful poll, or `null` if the deadline passed before the first one returned. */
+  lastSwap: GetSwapResponse | null;
+}
+
+/**
+ * `swaps.waitForCompletion` reached its `timeoutMs` before the swap reached a terminal status (code `WAIT_TIMEOUT`).
+ *
+ * The swap itself didn't fail: it may still finish, so check it again later (or wait for its webhook).
+ * Not a `TimeoutError`, which means a single HTTP request timed out.
+ *
+ * @example
+ * catch (e) {
+ *   if (e instanceof WaitTimeoutError) console.log("still", e.lastSwap?.status);
+ * }
+ */
+export class WaitTimeoutError extends PegarouteError {
+  /** The most recent successful poll, or `null` if the deadline passed before the first one returned. */
+  readonly lastSwap: GetSwapResponse | null;
+
+  constructor(init: WaitTimeoutErrorInit) {
+    super(init);
+
+    this.lastSwap = init.lastSwap;
+  }
+}
+
 /**
  * Error classes that map to exactly one HTTP status.
  *
@@ -174,6 +204,10 @@ export class TimeoutError extends ConnectionError {}
  * - `InternalServerError` covers a range (500, 502, 504, other 5xx) — see {@link errorClassForStatus}.
  * - `ConnectionError` / `TimeoutError` can't be looked up by status because no response arrived; the HTTP client
  *   creates them directly. They still extend `PegarouteError` (with `status: null`).
+ * - `ProviderChangedError` shares 409 with `ConflictError`; {@link errorFromResponse} picks it by the error code
+ *   `PROVIDER_CHANGED` (and only when the body carries the refreshed quote).
+ * - `WaitTimeoutError` isn't an HTTP failure at all: `swaps.waitForCompletion` throws it when its own deadline
+ *   passes (also `status: null`).
  * - Any other status (e.g. 413) falls back to the base `PegarouteError`.
  */
 const ERROR_CLASS_BY_STATUS: Record<number, typeof PegarouteError> = {
