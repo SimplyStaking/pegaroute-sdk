@@ -119,7 +119,7 @@ describe("pollUntil", () => {
 
 describe("swaps.waitForCompletion", () => {
   test("rejects an interval below 1000ms before sending any request", async () => {
-    // Arrange: a fetch that fails the test if it is ever called.
+    // Arrange: a fake `fetch` that counts requests, so we can check none were sent.
     let requests = 0;
     const pr = new Pegaroute({
       apiKey: "pegasus-test",
