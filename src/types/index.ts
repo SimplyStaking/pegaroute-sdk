@@ -79,3 +79,11 @@ export type {
   Transaction,
   TransactionsResponse,
 } from "./transactions.js";
+export type {
+  TestWebhookEvent,
+  TransactionWebhookData,
+  TransactionWebhookEvent,
+  TransactionWebhookEventType,
+  WebhookEvent,
+  WebhookStreamingProgress,
+} from "./webhooks.js";
