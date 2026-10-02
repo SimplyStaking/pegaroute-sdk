@@ -42,11 +42,16 @@ import type {
   SwapOutput,
   SwapProviderInfo,
   SwapTimestamps,
+  TestWebhookEvent,
   TokenAmount,
   TokensResponse,
   Transaction,
   TransactionsResponse,
+  TransactionWebhookData,
+  TransactionWebhookEvent,
   UtxoSwapExecution,
+  WebhookEvent,
+  WebhookStreamingProgress,
 } from "../../src/index.js";
 import type { FieldShape, Shape } from "./assert-shape.js";
 
@@ -449,3 +454,40 @@ export const transactionsResponseShape: FieldShape = {
   transactions: [transactionShape],
   pagination: { nextCursor: true, hasMore: true },
 } satisfies Shape<TransactionsResponse>;
+
+// ─── Webhooks ───
+
+const webhookStreamingProgressShape = {
+  ...streamingProgressShape,
+  failureContext: true,
+} satisfies Shape<WebhookStreamingProgress>;
+
+const transactionWebhookEventShape = {
+  event: true,
+  timestamp: true,
+  data: {
+    transactionId: true,
+    status: true,
+    internalStatus: true,
+    previousStatus: true,
+    internalPreviousStatus: true,
+    route: { provider: true, subprovider: true, private: true },
+    input: { chain: true, token: true, amount: true, address: true, refundAddress: true, txHash: true },
+    output: swapOutputShape,
+    fees: quoteFeesShape,
+    timestamps: swapTimestampsShape,
+    error: swapFailureShape,
+    refund: refundShape,
+    streamingProgress: webhookStreamingProgressShape,
+  } satisfies Shape<TransactionWebhookData>,
+} satisfies Shape<TransactionWebhookEvent>;
+
+const testWebhookEventShape = {
+  event: true,
+  timestamp: true,
+  data: { integrationId: true, message: true, generatedBy: true },
+} satisfies Shape<TestWebhookEvent>;
+
+/** Any webhook event, picking the manifest by its `event`. */
+export const webhookEventShape: FieldShape = (event: WebhookEvent) =>
+  event.event === "webhook.test" ? testWebhookEventShape : transactionWebhookEventShape;

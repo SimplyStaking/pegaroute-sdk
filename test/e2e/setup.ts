@@ -1,6 +1,6 @@
 /**
  * E2E setup, preloaded once per run by `bun run test:e2e`: checks local Pegaroute is up, provisions an API key,
- * and revokes it when every test has finished. Test files import `pr` from here.
+ * and revokes it when every test has finished. Test files import `pr` (and `operator`, for operator-only setup) from here.
  *
  * Provisioning uses Pegaroute's operator endpoints over HTTP. They are test-only and never part of the SDK.
  *
@@ -11,7 +11,6 @@
  *   (fees, affiliates, Squid integrator ID), or quotes return no routes.
  * - `PEGAROUTE_E2E_WEB_ORIGIN`: the web UI's origin, default `http://localhost:4001`. Pegaroute only accepts session
  *   requests that change something from this origin.
- * - `PEGAROUTE_E2E_API_KEY`: use this key instead of provisioning one.
  */
 import { afterAll } from "bun:test";
 import { Pegaroute } from "../../src/index.js";
@@ -31,7 +30,7 @@ interface OperatorSession {
 /** Calls a Pegaroute operator endpoint and returns its JSON body, failing loudly on any non-2xx. */
 async function operatorRequest<T>(
   session: OperatorSession,
-  method: "GET" | "POST",
+  method: "GET" | "POST" | "PATCH",
   path: string,
   body?: unknown,
 ): Promise<T> {
@@ -65,10 +64,7 @@ async function login(): Promise<OperatorSession> {
   const password = process.env.PEGAROUTE_E2E_OPERATOR_PASSWORD;
 
   if (!email || !password) {
-    throw new Error(
-      "E2E setup: set PEGAROUTE_E2E_OPERATOR_EMAIL and PEGAROUTE_E2E_OPERATOR_PASSWORD (e.g. in .env), " +
-        "or PEGAROUTE_E2E_API_KEY to skip provisioning.",
-    );
+    throw new Error("E2E setup: set PEGAROUTE_E2E_OPERATOR_EMAIL and PEGAROUTE_E2E_OPERATOR_PASSWORD (e.g. in .env).");
   }
 
   const response = await fetch(`${BASE_URL}/auth/login`, {
@@ -115,29 +111,42 @@ async function findIntegration(session: OperatorSession): Promise<string> {
   return integration.id;
 }
 
-/** Provisions a fresh API key for this run, and registers its revocation for after the last test. */
-async function provisionApiKey(): Promise<string> {
-  const session = await login();
-  const integrationId = await findIntegration(session);
+/** The logged-in operator and its integration, for tests that need operator endpoints (e.g. webhook setup). */
+export interface Operator {
+  /** ID of the integration the tests run against. */
+  integrationId: string;
 
-  const key = await operatorRequest<{ id: string; apiKey: string }>(
-    session,
+  /** Calls an operator endpoint as the logged-in operator, failing loudly on any non-2xx. */
+  request<T>(method: "GET" | "POST" | "PATCH", path: string, body?: unknown): Promise<T>;
+}
+
+/** Creates a fresh API key on the operator's integration, and registers its revocation for after the last test. */
+async function provisionApiKey(operator: Operator): Promise<string> {
+  const key = await operator.request<{ id: string; apiKey: string }>(
     "POST",
-    `/integrations/${integrationId}/api-keys`,
+    `/integrations/${operator.integrationId}/api-keys`,
     { label: `sdk e2e ${new Date().toISOString()}` },
   );
 
   // Revoke the key once every test file has finished, so runs don't leave live keys behind.
   afterAll(async () => {
-    await operatorRequest(session, "POST", `/integrations/${integrationId}/api-keys/${key.id}/revoke`, {});
+    await operator.request("POST", `/integrations/${operator.integrationId}/api-keys/${key.id}/revoke`, {});
   });
 
   return key.apiKey;
 }
 
+// Ensure Pegaroute is up and running before proceeding with the rest of the setup.
 await assertPegarouteIsUp();
 
-const apiKey = process.env.PEGAROUTE_E2E_API_KEY || (await provisionApiKey());
+// Log in as the operator to get a session for subsequent requests.
+const session = await login();
 
-/** The SDK client every e2e test uses, pointed at local Pegaroute. */
-export const pr: Pegaroute = new Pegaroute({ apiKey, baseUrl: BASE_URL });
+/** The logged-in operator and its integration, for tests that need operator endpoints (e.g. webhook setup). */
+export const operator: Operator = {
+  integrationId: await findIntegration(session),
+  request: (method, path, body) => operatorRequest(session, method, path, body),
+};
+
+/** The SDK client every e2e test uses, pointed at local Pegaroute, with a key created for this run. */
+export const pr: Pegaroute = new Pegaroute({ apiKey: await provisionApiKey(operator), baseUrl: BASE_URL });
