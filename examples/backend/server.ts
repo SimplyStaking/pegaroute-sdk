@@ -1,9 +1,8 @@
 /**
  * Minimal backend using the Pegaroute SDK: your frontend calls these routes, and only this server holds the API key.
  *
- * Run from the repo root with `bun run example:backend` (builds the SDK first; set the variables in `.env`), or:
- *   PEGAROUTE_EXAMPLE_API_KEY=… PEGAROUTE_EXAMPLE_BASE_URL=http://localhost:4000 \
- *   PEGAROUTE_EXAMPLE_WEBHOOK_SECRET=whsec_… bun examples/backend/server.ts
+ * Run from the repo root, after setting the PEGAROUTE_EXAMPLE_* variables (e.g. in `.env`):
+ *   bun run build && bun examples/backend/server.ts
  *
  * Routes:
  *   POST /quote               → quotes.get
