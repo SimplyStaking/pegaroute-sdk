@@ -54,7 +54,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
     "format": "biome check --write .",
-    "test": "bun test"
+    "test": "bun test",
+    "test:e2e": "bun test --timeout 60000 --preload ./test/e2e/setup.ts ./test/e2e/*.e2e.ts"
   },
   "publishConfig": {
     "access": "public"
