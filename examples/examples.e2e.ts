@@ -106,12 +106,20 @@ describe("examples", () => {
       });
       const fetched = await call<GetSwapResponse>("GET", `/swap/${swap.transactionId}`);
 
-      // Act: build the frontend's transactions and sign each, as the wallet would (fees and nonce are made up).
+      // Act: build the frontend's transactions.
       const builtTxs = evmTransactions(swap.execution);
 
+      // Act: sign each one as the wallet would. A real wallet fills in the nonce, gas and fees itself; nothing is
+      // broadcast here, so made-up values are fine. The index acts as the nonce (0, 1, …, as for a fresh wallet).
       const signedTxs = await Promise.all(
-        builtTxs.map((transaction, nonce) =>
-          wallet.signTransaction({ ...transaction, nonce, gas: 500_000n, maxFeePerGas: 1n, maxPriorityFeePerGas: 1n }),
+        builtTxs.map((transaction, index) =>
+          wallet.signTransaction({
+            ...transaction,
+            nonce: index,
+            gas: 500_000n,
+            maxFeePerGas: 1n,
+            maxPriorityFeePerGas: 1n,
+          }),
         ),
       );
 
