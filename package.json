@@ -54,6 +54,7 @@
     "typecheck": "tsc --noEmit",
     "typecheck:examples": "tsdown && tsc -p examples",
     "lint": "biome check .",
+    "check:package": "publint && attw --pack .",
     "format": "biome check --write .",
     "test": "bun test",
     "test:e2e": "bun test --timeout 60000 --preload ./test/e2e/setup.ts ./test/e2e/*.e2e.ts",
@@ -63,9 +64,11 @@
     "access": "public"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
     "@biomejs/biome": "^2.5.14",
     "@types/bun": "^1.4.2",
     "hono": "^4.13.12",
+    "publint": "^0.3.25",
     "tsdown": "^0.23.0",
     "typescript": "^7.0.2",
     "viem": "^2.57.2"

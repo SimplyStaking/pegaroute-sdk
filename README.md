@@ -178,7 +178,10 @@ the ERC-20 approval.
 bun install
 bun test                    # unit tests
 bun run typecheck && bun run lint && bun run build
+bun run check:package       # package exports and types (after build)
 ```
+
+CI runs all of the above, plus `typecheck:examples`, on every pull request.
 
 End-to-end tests run against a local Pegaroute (`docker compose up -d --build` in the Pegaroute repo). Copy
 [`.env.example`](.env.example) to `.env` and fill it in; it explains what each variable needs.

@@ -1,0 +1,50 @@
+# Checks every pull request and every push to main. Never publishes.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A newer push to the same branch or PR cancels the run still in progress.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # Same Bun version as local development (`packageManager` in package.json).
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Unit tests
+        run: bun test
+
+      - name: Build
+        run: bun run build
+
+      # publint and are-the-types-wrong: the package's exports and types resolve for every consumer (ESM, CJS, bundlers).
+      - name: Package checks
+        run: bun run check:package
+
+      # The examples compile against the built SDK, through its published entry points.
+      - name: Typecheck examples
+        run: bun run typecheck:examples
