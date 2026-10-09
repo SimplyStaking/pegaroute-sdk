@@ -144,7 +144,9 @@ try {
 }
 ```
 
-GET requests are retried on 429, 503 and connection errors (`maxRetries`, default 2). POSTs are never retried.
+GET requests are retried on connection errors and on errors whose `retryable` is `true` (`maxRetries`, default 2).
+`retryable` is Pegaroute's own flag, or, when the response doesn't carry one (e.g. a proxy's error page), `true` for
+429, 502, 503 and 504. POSTs are never retried.
 
 ## Statuses
 

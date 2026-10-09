@@ -19,7 +19,7 @@ export interface PegarouteOptions {
   /** Per-request timeout. Default 30 000 ms. */
   timeoutMs?: number;
 
-  /** Retries for GET requests on 429, 503 and connection errors. Default 2. */
+  /** Retries for GET requests on connection errors and on errors marked `retryable` (e.g. 429, 503). Default 2. */
   maxRetries?: number;
 
   /** Custom `fetch` implementation (tests, proxies). Default `globalThis.fetch`. */

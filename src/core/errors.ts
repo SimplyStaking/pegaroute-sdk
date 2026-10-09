@@ -222,6 +222,12 @@ const ERROR_CLASS_BY_STATUS: Record<number, typeof PegarouteError> = {
   503: ServiceUnavailableError,
 };
 
+/**
+ * Statuses worth trying again when the error body doesn't say: rate limited, or a temporary gateway or availability
+ * failure (often a proxy's own error page, without Pegaroute's error envelope).
+ */
+const RETRYABLE_STATUSES = new Set([429, 502, 503, 504]);
+
 /** Exact status match first, then any other 5xx → `InternalServerError`, otherwise the base class. */
 function errorClassForStatus(status: number): typeof PegarouteError {
   return ERROR_CLASS_BY_STATUS[status] ?? (status >= 500 ? InternalServerError : PegarouteError);
@@ -284,7 +290,11 @@ function isProviderChangedBody(value: object): value is ProviderChangedBody {
   );
 }
 
-/** Builds the matching error subclass from a non-2xx response and its (already read) body text. */
+/**
+ * Builds the matching error subclass from a non-2xx response and its (already read) body text.
+ *
+ * `retryable` is the server's own flag when its error body has one, otherwise it follows RETRYABLE_STATUSES. The HTTP client retries a GET only when it is `true`, so callers see the same answer the SDK acted on.
+ */
 export function errorFromResponse(response: Response, bodyText: string): PegarouteError {
   // Determine the appropriate error class based on the HTTP status code.
   const ErrorClass = errorClassForStatus(response.status);
@@ -304,7 +314,7 @@ export function errorFromResponse(response: Response, bodyText: string): Pegarou
       status: response.status,
       message: `HTTP ${response.status} ${response.statusText}`.trim(),
       userMessage: "Something went wrong. Please try again.",
-      retryable: false,
+      retryable: RETRYABLE_STATUSES.has(response.status),
       details: { body: bodyText.slice(0, 500) },
     });
   }
@@ -316,7 +326,7 @@ export function errorFromResponse(response: Response, bodyText: string): Pegarou
     status: response.status,
     message: error.message,
     userMessage: error.userMessage ?? error.message,
-    retryable: error.retryable ?? false,
+    retryable: error.retryable ?? RETRYABLE_STATUSES.has(response.status),
     retryAfterSeconds: error.retryAfterSeconds ?? null,
     ...(error.provider !== undefined && { provider: error.provider }),
     ...(error.details !== undefined && { details: error.details }),

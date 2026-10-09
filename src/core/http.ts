@@ -59,9 +59,6 @@ export interface HttpRequest {
   successStatuses?: number[];
 }
 
-/** HTTP statuses worth retrying: rate limited, or temporarily unavailable. */
-const RETRYABLE_STATUSES = new Set([429, 503]);
-
 /** If the server asks us to wait longer than this, give up instead of blocking the caller. */
 const MAX_RETRY_AFTER_SECONDS = 60;
 
@@ -77,7 +74,7 @@ export class HttpClient {
     this.#config = config;
   }
 
-  /** Sends a request, retrying GETs on 429/503/connection errors. */
+  /** Sends a request, retrying GETs on connection errors and on errors marked `retryable` (see `errorFromResponse`). */
   async request<T>(request: HttpRequest, options: RequestOptions = {}): Promise<T> {
     // Validate the per-call timeout before sending anything (the client's default was checked at construction).
     if (options.timeoutMs !== undefined) assertIntegerAtLeast("timeoutMs", options.timeoutMs, 1);
@@ -108,12 +105,10 @@ export class HttpClient {
         if (body !== undefined && !isPegarouteErrorEnvelope(body)) return body as T;
       }
 
-      // Failure: build the typed error, then decide whether this status is worth another attempt.
+      // Failure: build the typed error. Its `retryable` flag decides on another attempt,
+      // e.g. a disabled chain answers 503 with `retryable: false`, while a proxy's 502 page is retried.
       const error = errorFromResponse(response, bodyText);
-      if (attempt >= maxRetries || !RETRYABLE_STATUSES.has(response.status)) throw error;
-
-      // The server can rule a retry out, e.g. a disabled chain answers 503 with `retryable: false` in its error body.
-      if (serverForbidsRetry(bodyText)) throw error;
+      if (attempt >= maxRetries || !error.retryable) throw error;
 
       // Get the amount of time to wait before retrying. This considers the `Retry-After` header and exponential backoff as fallback.
       const delayMs = retryDelayMs(response, error, attempt);
@@ -216,15 +211,6 @@ function tryParseJson(text: string): unknown {
   } catch {
     return undefined;
   }
-}
-
-/**
- * Whether the body is Pegaroute's error envelope with an explicit `retryable: false`.
- * A body without the envelope (e.g. a proxy page) or without the flag doesn't forbid a retry.
- */
-function serverForbidsRetry(bodyText: string): boolean {
-  const body = tryParseJson(bodyText);
-  return isPegarouteErrorEnvelope(body) && body.error.retryable === false;
 }
 
 /** Retry-After (header, then body) wins; `null` means the wait is too long to retry. */

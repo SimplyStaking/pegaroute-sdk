@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   ConflictError,
   ConnectionError,
+  InternalServerError,
   PegarouteError,
   ProviderChangedError,
   QuoteExpiredError,
@@ -311,5 +312,21 @@ describe("HttpClient", () => {
     expect(calls).toHaveLength(1);
     expect(error).toBeInstanceOf(ServiceUnavailableError);
     expect(error).toMatchObject({ code: "CHAIN_DISABLED", retryable: false });
+  });
+
+  test("retries a proxy's 502 page, and reports the same retryable: true it acted on", async () => {
+    // Arrange: a proxy's HTML error page twice (no Pegaroute error body, so no `retryable` flag).
+    const proxyPage = () => new Response("<html>Bad Gateway</html>", { status: 502, headers: { "Retry-After": "0" } });
+    const { fetch, calls } = mockFetch(proxyPage(), proxyPage());
+
+    // Act: allow one retry.
+    const error = await client(fetch, { maxRetries: 1 })
+      .request({ method: "GET", path: "/chains" })
+      .catch((e) => e);
+
+    // Assert: retried once because of its status, and the thrown error says so too.
+    expect(calls).toHaveLength(2);
+    expect(error).toBeInstanceOf(InternalServerError);
+    expect(error).toMatchObject({ code: "UNKNOWN_ERROR", status: 502, retryable: true });
   });
 });
