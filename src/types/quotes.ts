@@ -1,6 +1,6 @@
-import type { ErrorCode } from "../core/errors.js";
 import type { OpenOceanRouteMeta, PrivateSwapMode, Provider, QuoteFees } from "./common.js";
 import type { ProviderType } from "./discovery.js";
+import type { ErrorCode } from "./errors.js";
 
 /**
  * What to quote. Chain and token IDs come from `chains.list()` and `tokens.list(chain)`; case is ignored.

@@ -28,7 +28,7 @@ Bun for install, tests and scripts. See the README's [Development](README.md#dev
 
 ## Conventions
 
-- `@pegaroute/sdk/types` must stay browser-safe: types and guards only, never the client or anything holding the key.
+- `@pegaroute/sdk/types` must stay browser-safe: types and guards only, never the client or anything holding the key. For this reason `src/types/` never imports from `src/core/` (or anything else outside `src/types/`).
 - Types follow what the Pegaroute server returns at runtime (the `../pegasus` source), not the OpenAPI spec. Always
   present but nullable → `T | null`; omitted when unset → `field?: T`. Money is a `string` or `TokenAmount`, never a
   number.

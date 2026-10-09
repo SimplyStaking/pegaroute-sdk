@@ -1,4 +1,3 @@
-import type { ErrorCode } from "../core/errors.js";
 import type {
   AffiliateFeeBreakdown,
   PrivateSwapMode,
@@ -9,6 +8,7 @@ import type {
   StreamingProgress,
 } from "./common.js";
 import type { ProviderType } from "./discovery.js";
+import type { ErrorCode } from "./errors.js";
 import type { SwapExecution } from "./execution.js";
 import type { InternalSwapStatus, SwapStatus } from "./status.js";
 
