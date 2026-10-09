@@ -38,11 +38,9 @@ jobs:
       - name: Unit tests
         run: bun test
 
-      - name: Build
-        run: bun run build
-
-      # publint and are-the-types-wrong: the package's exports and types resolve for ESM consumers and bundlers.
-      - name: Package checks
+      # Builds like a publish would (check:package has a prepack command that calls `bun run build`), then publint and are-the-types-wrong: the package's exports and types
+      # resolve for ESM consumers and bundlers.
+      - name: Build and check package
         run: bun run check:package
 
       # The examples compile against the built SDK, through its published entry points.

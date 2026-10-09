@@ -10,7 +10,7 @@ Bun for install, tests and scripts. See the README's [Development](README.md#dev
 - `bun test`: unit tests (mocked `fetch`, no network)
 - `bun run typecheck` / `bun run lint` / `bun run build`: tsc, Biome, tsdown
 - `bun run format`: Biome fixes and formatting
-- `bun run check:package`: publint and are-the-types-wrong on the built package (run `build` first)
+- `bun run check:package`: builds (prepack command), then runs publint and are-the-types-wrong on the package
 - `bun run test:e2e`: REST and webhook e2e against a local Pegaroute (needs `.env`, see `.env.example`)
 - `bun run test:e2e:examples`: runs the backend example and EVM signing against a local Pegaroute
 - `bun run typecheck:examples`: typechecks `examples/` against the built SDK

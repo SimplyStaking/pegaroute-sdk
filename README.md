@@ -182,7 +182,7 @@ the ERC-20 approval.
 bun install
 bun test                    # unit tests
 bun run typecheck && bun run lint && bun run build
-bun run check:package       # package exports and types (after build)
+bun run check:package       # builds (prepack command), then checks package exports and types
 ```
 
 CI runs all of the above, plus `typecheck:examples`, on every pull request.
