@@ -45,6 +45,7 @@
     "check:package": "bun run prepack && publint && attw --pack . --profile esm-only",
     "format": "biome check --write .",
     "test": "bun test",
+    "test:node": "bun run build && node --test \"test/node/*.node.mjs\"",
     "test:e2e": "bun test --timeout 60000 --preload ./test/e2e/setup.ts ./test/e2e/*.e2e.ts",
     "test:e2e:examples": "tsdown && bun test --timeout 60000 ./examples/examples.e2e.ts"
   },

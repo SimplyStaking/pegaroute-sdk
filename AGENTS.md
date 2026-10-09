@@ -8,6 +8,7 @@ webhook verification and status polling. Operator/admin endpoints are out of sco
 Bun for install, tests and scripts. See the README's [Development](README.md#development) section for e2e setup.
 
 - `bun test`: unit tests (mocked `fetch`, no network)
+- `bun run test:node`: smoke test of the built package on real Node (needs Node ≥22.12, see `.node-version`)
 - `bun run typecheck` / `bun run lint` / `bun run build`: tsc, Biome, tsdown
 - `bun run format`: Biome fixes and formatting
 - `bun run check:package`: builds (prepack command), then runs publint and are-the-types-wrong on the package
@@ -21,7 +22,8 @@ Bun for install, tests and scripts. See the README's [Development](README.md#dev
 - `src/core/`: HTTP (auth, timeout, GET retries), errors, pagination, polling, option validation
 - `src/types/`: domain types and type guards; also the browser-safe `@pegaroute/sdk/types` entry
 - `src/webhooks.ts`: `verifyWebhook`
-- `test/*.test.ts`: unit tests; `test/e2e/*.e2e.ts`: e2e (ignored by plain `bun test`)
+- `test/*.test.ts`: unit tests; `test/e2e/*.e2e.ts`: e2e; `test/node/*.node.mjs`: Node smoke test (the last two are
+  ignored by plain `bun test`)
 - `examples/`: backend (Hono) and EVM frontend signing (viem); not published
 
 ## Conventions

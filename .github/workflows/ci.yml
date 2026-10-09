@@ -46,3 +46,11 @@ jobs:
       # The examples compile against the built SDK, through its published entry points.
       - name: Typecheck examples
         run: bun run typecheck:examples
+
+      # The lowest Node we support (`.node-version`), for the smoke test of the built package on real Node.
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+
+      - name: Node smoke test
+        run: bun run test:node

@@ -181,6 +181,7 @@ the ERC-20 approval.
 ```sh
 bun install
 bun test                    # unit tests
+bun run test:node           # built package on real Node (needs Node ≥22.12, see .node-version)
 bun run typecheck && bun run lint && bun run build
 bun run check:package       # builds (prepack command), then checks package exports and types
 ```
