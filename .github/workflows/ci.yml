@@ -41,7 +41,7 @@ jobs:
       - name: Build
         run: bun run build
 
-      # publint and are-the-types-wrong: the package's exports and types resolve for every consumer (ESM, CJS, bundlers).
+      # publint and are-the-types-wrong: the package's exports and types resolve for ESM consumers and bundlers.
       - name: Package checks
         run: bun run check:package
 

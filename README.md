@@ -10,7 +10,9 @@ TypeScript SDK for the Pegaroute cross-chain swap API.
 npm install @pegaroute/sdk
 ```
 
-Requires Node.js 22+ (or Bun / Deno).
+Requires Node.js 22.12+ (or Bun / Deno). The package is ESM only: use `import`, or `require()` from CommonJS, which
+Node supports from 22.12. Where `require()` of ESM isn't available, CommonJS code can load it with
+`const { Pegaroute } = await import("@pegaroute/sdk");`.
 
 The client holds your API key, so **only use it on your backend**, never in browser code. Your frontend talks to your
 backend, and has the user's wallet sign each swap with your wallet library of choice (e.g. viem). The SDK doesn't sign:
