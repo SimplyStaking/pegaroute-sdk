@@ -99,7 +99,10 @@ export async function sendEvmSwap(execution: SwapExecution): Promise<Hash> {
   if (!account) throw new Error("No wallet account connected");
 
   const transactions = evmTransactions(execution);
-  await wallet.switchChain({ id: transactions[0]?.chainId ?? 1 });
+  const [first] = transactions;
+  if (!first) throw new Error("No transactions to send");
+
+  await wallet.switchChain({ id: first.chainId });
 
   // Send each transaction, waiting for it to be mined so the swap only runs once its approval is in place.
   let hash: Hash | undefined;
