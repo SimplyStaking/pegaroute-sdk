@@ -99,6 +99,8 @@ export async function sendEvmSwap(execution: SwapExecution): Promise<Hash> {
   if (!account) throw new Error("No wallet account connected");
 
   const transactions = evmTransactions(execution);
+
+  // The approval and the swap are on the same chain, so switch once, to the first transaction's chain.
   const [first] = transactions;
   if (!first) throw new Error("No transactions to send");
 
