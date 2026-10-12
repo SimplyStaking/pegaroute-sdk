@@ -10,7 +10,7 @@
  * - `sendEvmSwap(execution)`: browser-only. Asks the user's wallet to sign and send those transactions, and returns
  *   the swap's tx hash.
  */
-import { isEvmExecution, isExecutionMode, type SwapExecution } from "@pegaroute/sdk/types";
+import { isExecutionFamily, isExecutionMode, type SwapExecution } from "@pegaroute/sdk/types";
 import {
   type Address,
   createPublicClient,
@@ -46,7 +46,7 @@ export interface EvmTransaction {
  */
 export function evmTransactions(execution: SwapExecution): EvmTransaction[] {
   // This example only covers router contract calls; other execution modes need other wallet calls.
-  if (!isEvmExecution(execution) || !isExecutionMode(execution, "contract-call")) {
+  if (!isExecutionFamily(execution, "evm") || !isExecutionMode(execution, "contract-call")) {
     throw new Error(`This example doesn't handle ${execution.family} ${execution.mode} swaps`);
   }
 

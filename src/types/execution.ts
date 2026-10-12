@@ -193,9 +193,9 @@ export interface OtherDepositSwapExecution {
  * What the user's wallet must sign to fund a swap. Switch on `family` and `mode`, never on the provider name.
  *
  * @example
- * if (isEvmExecution(execution)) {
+ * if (isExecutionFamily(execution, "evm")) {
  *   // execution is EvmSwapExecution
- * } else if (isUtxoExecution(execution)) {
+ * } else if (isExecutionFamily(execution, "utxo")) {
  *   // execution.mode is "payment-with-memo" | "serialized-tx"
  * }
  */
@@ -253,35 +253,17 @@ export function isExecutionMode<M extends ExecutionMode>(
   return execution.mode === mode;
 }
 
-/** Narrows an execution to the variants of one family. Prefer the named guards (`isEvmExecution`, …) where they exist. */
+/**
+ * Narrows an execution to the variants of one family.
+ *
+ * @example
+ * if (isExecutionFamily(execution, "evm")) {
+ *   // execution.mode is "contract-call" | "native-transfer" | "erc20-transfer"
+ * }
+ */
 export function isExecutionFamily<F extends ExecutionFamily>(
   execution: SwapExecution,
   family: F,
 ): execution is ExecutionOfFamily<F> {
   return execution.family === family;
-}
-
-/** EVM chains: contract call, native transfer or ERC-20 transfer. */
-export function isEvmExecution(execution: SwapExecution): execution is ExecutionOfFamily<"evm"> {
-  return isExecutionFamily(execution, "evm");
-}
-
-/** Bitcoin-like chains: payment with memo, or a PSBT (`serialized-tx`). */
-export function isUtxoExecution(execution: SwapExecution): execution is ExecutionOfFamily<"utxo"> {
-  return isExecutionFamily(execution, "utxo");
-}
-
-/** Cosmos chains, including THORChain and Maya: bank send, msg-deposit or msg-execute. */
-export function isCosmosExecution(execution: SwapExecution): execution is ExecutionOfFamily<"cosmos"> {
-  return isExecutionFamily(execution, "cosmos");
-}
-
-/** Solana: serialized transaction or deposit transfer. */
-export function isSolanaExecution(execution: SwapExecution): execution is ExecutionOfFamily<"solana"> {
-  return isExecutionFamily(execution, "solana");
-}
-
-/** Sui: serialized transaction or deposit transfer. */
-export function isSuiExecution(execution: SwapExecution): execution is ExecutionOfFamily<"sui"> {
-  return isExecutionFamily(execution, "sui");
 }

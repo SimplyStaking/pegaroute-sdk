@@ -52,11 +52,13 @@ if (best) {
 `swap.execution` says what the user's wallet must sign. For an EVM router call (e.g. THORChain):
 
 ```ts
-import { isEvmExecution, isExecutionMode, type SwapExecution } from "@pegaroute/sdk/types";
+import { isExecutionFamily, isExecutionMode, type SwapExecution } from "@pegaroute/sdk/types";
 import { type Address, createWalletClient, custom, type Hex } from "viem";
 
 async function signSwap(execution: SwapExecution) {
-  if (!isEvmExecution(execution) || !isExecutionMode(execution, "contract-call")) throw new Error("Not handled here");
+  if (!isExecutionFamily(execution, "evm") || !isExecutionMode(execution, "contract-call")) {
+    throw new Error("Not handled here");
+  }
 
   const wallet = createWalletClient({ transport: custom(window.ethereum!) });
   const [account] = await wallet.requestAddresses();
@@ -90,8 +92,8 @@ switch (execution.family) {
 if (isExecutionMode(execution, "deposit-transfer")) showDeposit(execution.to, execution.amount, execution.memo);
 ```
 
-The guards `isEvmExecution`, `isUtxoExecution`, `isCosmosExecution`, `isSolanaExecution`, `isSuiExecution`,
-`isExecutionFamily` and `isExecutionMode` narrow `execution` to the matching types. Each type documents what to sign.
+The guards `isExecutionFamily(execution, family)` and `isExecutionMode(execution, mode)` narrow `execution` to the
+matching types. Each type documents what to sign.
 
 ## Report the tx hash and track status (backend)
 
