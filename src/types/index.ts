@@ -1,5 +1,5 @@
 // Browser-safe entry: types and type guards only. Never import the client here.
-export type { ErrorCode, KnownErrorCode } from "../core/errors.js";
+
 export type {
   AffiliateFeeBreakdown,
   KnownProvider,
@@ -29,6 +29,7 @@ export type {
   Token,
   TokensResponse,
 } from "./discovery.js";
+export type { ErrorCode, KnownErrorCode } from "./errors.js";
 export {
   type CosmosBankSendSwapExecution,
   type CosmosMsgDepositSwapExecution,
@@ -39,13 +40,8 @@ export {
   type ExecutionMode,
   type ExecutionOfFamily,
   type ExecutionOfMode,
-  isCosmosExecution,
-  isEvmExecution,
   isExecutionFamily,
   isExecutionMode,
-  isSolanaExecution,
-  isSuiExecution,
-  isUtxoExecution,
   type JsonSwapExecution,
   type NamedDepositSwapExecution,
   type OtherDepositSwapExecution,

@@ -1,6 +1,7 @@
 /**
  * Key manifests for every response type, used by `assertShape`. Each `satisfies Shape<T>` makes tsc keep the manifest's
- * keys identical to the type's, so a type change that isn't mirrored here fails `bun run typecheck`.
+ * keys identical to the type's, each marked `optional(…)` / `nullable(…)` exactly as the type declares it, so a type
+ * change that isn't mirrored here fails `bun run typecheck`.
  */
 import type {
   AffiliateFeeBreakdown,
@@ -53,7 +54,7 @@ import type {
   WebhookEvent,
   WebhookStreamingProgress,
 } from "../../src/index.js";
-import type { FieldShape, Shape } from "./assert-shape.js";
+import { type FieldShape, nullable, optional, type Shape } from "./assert-shape.js";
 
 // ─── Shared ───
 
@@ -64,26 +65,26 @@ const quoteFeesShape = {
   liquidity: true,
   outbound: true,
   total: true,
-  unit: true,
-  subAffiliate: true,
-  totalBps: true,
-  slippageBps: true,
+  unit: optional(),
+  subAffiliate: optional(),
+  totalBps: optional(),
+  slippageBps: optional(),
 } satisfies Shape<QuoteFees>;
 
 const openOceanRouteShape = {
-  dexId: true,
-  dexCode: true,
-  dexes: [{ dexId: true, dexCode: true }],
+  dexId: optional(),
+  dexCode: optional(),
+  dexes: optional([{ dexId: optional(), dexCode: optional() }]),
 } satisfies Shape<OpenOceanRouteMeta>;
 
 const routeInfoShape = {
   provider: true,
-  subprovider: true,
-  private: true,
+  subprovider: optional(),
+  private: optional(),
   expectedOutput: true,
   fees: quoteFeesShape,
   estimatedTimeSeconds: true,
-  openOceanRoute: openOceanRouteShape,
+  openOceanRoute: optional(openOceanRouteShape),
 } satisfies Shape<RouteInfo>;
 
 const affiliateFeeBreakdownShape = {
@@ -94,28 +95,28 @@ const affiliateFeeBreakdownShape = {
   realizedPegasusFeeBps: true,
   realizedIntegratorFeeBps: true,
   feeSource: true,
-  pegasusNetBps: true,
-  pegasusNetUsd: true,
+  pegasusNetBps: optional(),
+  pegasusNetUsd: optional(),
 } satisfies Shape<AffiliateFeeBreakdown>;
 
 const refundShape = {
   status: true,
-  txHash: true,
+  txHash: optional(),
   chain: true,
   amount: true,
   originalAmount: true,
   feeDeducted: true,
   feeDescription: true,
   refundAddress: true,
-  completedAt: true,
+  completedAt: optional(),
 } satisfies Shape<RefundInfo>;
 
 const streamingProgressShape = {
   completedSubSwaps: true,
   totalSubSwaps: true,
-  lastSubSwapTimestamp: true,
-  partialOutput: true,
-  partialRefund: { amount: true, chain: true, token: true },
+  lastSubSwapTimestamp: optional(),
+  partialOutput: optional(),
+  partialRefund: optional({ amount: true, chain: true, token: true }),
 } satisfies Shape<StreamingProgress>;
 
 // ─── Discovery ───
@@ -127,7 +128,7 @@ export const pingResponseShape: FieldShape = {
 } satisfies Shape<PingResponse>;
 
 export const chainsResponseShape: FieldShape = {
-  chains: [{ id: true, name: true, chainId: true }],
+  chains: [{ id: true, name: true, chainId: nullable() }],
 } satisfies Shape<ChainsResponse>;
 
 export const tokensResponseShape: FieldShape = {
@@ -137,16 +138,16 @@ export const tokensResponseShape: FieldShape = {
 
 const feeStructureShape = {
   affiliateFee: {
-    minBps: true,
-    minPercent: true,
-    minBpsWhenSet: true,
-    minPercentWhenSet: true,
+    minBps: optional(),
+    minPercent: optional(),
+    minBpsWhenSet: optional(),
+    minPercentWhenSet: optional(),
     maxBps: true,
     maxPercent: true,
-    defaultBps: true,
-    defaultPercent: true,
+    defaultBps: optional(),
+    defaultPercent: optional(),
   },
-  providerTake: { bpsOfAffiliateFee: true, percentOfAffiliateFee: true },
+  providerTake: nullable({ bpsOfAffiliateFee: true, percentOfAffiliateFee: true }),
 } satisfies Shape<ProviderFeeStructure>;
 
 const providerHealthShape = {
@@ -158,13 +159,13 @@ const providerHealthShape = {
   latencyMs: true,
   haltedChains: true,
   lastChecked: true,
-  maxAffiliateBps: true,
-  feeStructure: feeStructureShape,
+  maxAffiliateBps: nullable(),
+  feeStructure: nullable(feeStructureShape),
 } satisfies Shape<ProviderHealth>;
 
 export const providersResponseShape: FieldShape = {
   providers: [
-    { ...providerHealthShape, supportedChains: true, configuredReferral: true } satisfies Shape<ProviderInfo>,
+    { ...providerHealthShape, supportedChains: true, configuredReferral: nullable() } satisfies Shape<ProviderInfo>,
   ],
 } satisfies Shape<ProvidersResponse>;
 
@@ -180,20 +181,20 @@ export const healthResponseShape: FieldShape = {
 
 const quoteRouteShape = {
   provider: true,
-  subprovider: true,
-  private: true,
+  subprovider: optional(),
+  private: optional(),
   providerType: true,
   expectedOutput: true,
   estimatedTimeSeconds: true,
   fees: quoteFeesShape,
-  expiry: true,
-  memo: true,
-  inboundAddress: true,
-  router: true,
-  gasRate: true,
-  minAmount: true,
+  expiry: nullable(),
+  memo: nullable(),
+  inboundAddress: nullable(),
+  router: nullable(),
+  gasRate: nullable(),
+  minAmount: nullable(),
   resolvedFee: { feeBps: true },
-  openOceanRoute: openOceanRouteShape,
+  openOceanRoute: optional(openOceanRouteShape),
 } satisfies Shape<QuoteRoute>;
 
 const routeWarningShape = {
@@ -217,15 +218,15 @@ const evmApprovalShape = { spender: true, tokenAddress: true, amount: tokenAmoun
 const evmExecutionShape = {
   family: true,
   mode: true,
-  signature: { method: true, message: true },
+  signature: optional({ method: true, message: true }),
   chainId: true,
   to: true,
-  data: true,
-  value: tokenAmountShape,
-  gasLimit: true,
-  memo: true,
-  approval: evmApprovalShape,
-  transferAmount: tokenAmountShape,
+  data: nullable(),
+  value: nullable(tokenAmountShape),
+  gasLimit: nullable(),
+  memo: nullable(),
+  approval: nullable(evmApprovalShape),
+  transferAmount: nullable(tokenAmountShape),
 } satisfies Shape<EvmSwapExecution>;
 
 const utxoExecutionShape = {
@@ -233,8 +234,8 @@ const utxoExecutionShape = {
   mode: true,
   to: true,
   amount: tokenAmountShape,
-  memo: true,
-  gasRate: true,
+  memo: nullable(),
+  gasRate: nullable(),
 } satisfies Shape<UtxoSwapExecution>;
 
 const bankSendExecutionShape = {
@@ -242,7 +243,7 @@ const bankSendExecutionShape = {
   mode: true,
   to: true,
   amount: tokenAmountShape,
-  memo: true,
+  memo: nullable(),
 } satisfies Shape<CosmosBankSendSwapExecution>;
 
 const msgDepositExecutionShape = {
@@ -252,23 +253,23 @@ const msgDepositExecutionShape = {
   asset: true,
   assetDecimals: true,
   amount: tokenAmountShape,
-  memo: true,
+  memo: nullable(),
 } satisfies Shape<CosmosMsgDepositSwapExecution>;
 
 const msgExecuteExecutionShape = {
   family: true,
   mode: true,
   messageJson: true,
-  memo: true,
-  gasPrice: true,
-  gasMultiplier: true,
+  memo: nullable(),
+  gasPrice: nullable(),
+  gasMultiplier: nullable(),
 } satisfies Shape<CosmosMsgExecuteSwapExecution>;
 
 const serializedExecutionShape = {
   family: true,
   mode: true,
   serializedTransaction: true,
-  minOut: tokenAmountShape,
+  minOut: nullable(tokenAmountShape),
 } satisfies Shape<SerializedSwapExecution>;
 
 const jsonExecutionShape = {
@@ -283,7 +284,7 @@ const namedDepositExecutionShape = {
   mode: true,
   to: true,
   amount: tokenAmountShape,
-  memo: true,
+  memo: nullable(),
 } satisfies Shape<NamedDepositSwapExecution>;
 
 const otherDepositExecutionShape = {
@@ -292,7 +293,7 @@ const otherDepositExecutionShape = {
   chain: true,
   to: true,
   amount: tokenAmountShape,
-  memo: true,
+  memo: nullable(),
 } satisfies Shape<OtherDepositSwapExecution>;
 
 /** Picks the manifest for an execution variant from its `family` and `mode`. */
@@ -323,7 +324,11 @@ function executionShape(execution: SwapExecution): FieldShape {
 
 // ─── Swaps ───
 
-const swapProviderShape = { name: true, referenceId: true, details: true } satisfies Shape<SwapProviderInfo>;
+const swapProviderShape = {
+  name: true,
+  referenceId: nullable(),
+  details: nullable(),
+} satisfies Shape<SwapProviderInfo>;
 
 export const createSwapResponseShape: FieldShape = {
   transactionId: true,
@@ -335,61 +340,66 @@ export const createSwapResponseShape: FieldShape = {
 } satisfies Shape<CreateSwapResponse>;
 
 const instaswapFeeLineShape = {
-  type: true,
-  name: true,
-  amountUsd: true,
-  asset: true,
-  amount: true,
+  type: optional(),
+  name: optional(),
+  amountUsd: optional(),
+  asset: optional(),
+  amount: optional(),
 } satisfies Shape<InstaswapFeeLine>;
 
 const instaswapSwapLiteShape = {
   txid: true,
-  estimatedOut: true,
-  estimatedOutUsd: true,
-  depositAmount: true,
-  depositAmountExact: true,
-  depositAmountUsd: true,
-  feeBreakdown: [instaswapFeeLineShape],
-  etaSeconds: true,
+  estimatedOut: optional(),
+  estimatedOutUsd: optional(),
+  depositAmount: optional(),
+  depositAmountExact: optional(),
+  depositAmountUsd: optional(),
+  feeBreakdown: optional([instaswapFeeLineShape]),
+  etaSeconds: optional(),
   depositAddress: true,
-  depositTokenSymbol: true,
-  expiresAt: true,
-  instructions: true,
+  depositTokenSymbol: optional(),
+  expiresAt: optional(nullable()),
+  instructions: optional(),
 } satisfies Shape<InstaswapSwapLiteSnapshot>;
 
 const swapInputShape = {
   chain: true,
   token: true,
   amount: true,
-  address: true,
-  refundAddress: true,
-  txHash: true,
-  providerReferenceId: true,
-  providerStatus: {
+  address: optional(),
+  refundAddress: optional(),
+  txHash: optional(),
+  providerReferenceId: optional(),
+  providerStatus: optional({
     status: true,
     actionRequired: true,
     message: true,
-    explorerUrl: true,
-  } satisfies Shape<ProviderStatusInfo>,
-  instaswapSwapLite: instaswapSwapLiteShape,
+    explorerUrl: optional(),
+  } satisfies Shape<ProviderStatusInfo>),
+  instaswapSwapLite: optional(instaswapSwapLiteShape),
 } satisfies Shape<SwapInput>;
 
 const swapOutputShape = {
   chain: true,
   token: true,
   address: true,
-  amount: true,
-  txHash: true,
+  amount: optional(),
+  txHash: optional(),
 } satisfies Shape<SwapOutput>;
 
 const swapTimestampsShape = {
   created: true,
-  submitted: true,
-  confirmed: true,
-  completed: true,
+  submitted: optional(),
+  confirmed: optional(),
+  completed: optional(),
 } satisfies Shape<SwapTimestamps>;
 
-const swapFailureShape = { code: true, message: true, userMessage: true, provider: true } satisfies Shape<SwapFailure>;
+const swapFailureShape = {
+  code: true,
+  message: true,
+  userMessage: true,
+  provider: optional(),
+} satisfies Shape<SwapFailure>;
 
 export const getSwapResponseShape: FieldShape = {
   transactionId: true,
@@ -399,18 +409,18 @@ export const getSwapResponseShape: FieldShape = {
   input: swapInputShape,
   output: swapOutputShape,
   fees: quoteFeesShape,
-  affiliateFeeBreakdown: affiliateFeeBreakdownShape,
+  affiliateFeeBreakdown: optional(affiliateFeeBreakdownShape),
   timestamps: swapTimestampsShape,
-  error: swapFailureShape,
-  refund: refundShape,
-  streamingProgress: streamingProgressShape,
-  execution: executionShape,
-  provider: swapProviderShape,
+  error: nullable(swapFailureShape),
+  refund: nullable(refundShape),
+  streamingProgress: nullable(streamingProgressShape),
+  execution: optional(executionShape),
+  provider: optional(swapProviderShape),
 } satisfies Shape<GetSwapResponse>;
 
 export const swapEventsResponseShape: FieldShape = {
   transactionId: true,
-  events: [{ id: true, fromStatus: true, toStatus: true, timestamp: true, metadata: true }],
+  events: [{ id: true, fromStatus: true, toStatus: true, timestamp: true, metadata: nullable() }],
 } satisfies Shape<SwapEventsResponse>;
 
 export const submitTxHashResponseShape: FieldShape = {
@@ -424,10 +434,10 @@ export const submitTxHashResponseShape: FieldShape = {
 const expectedAffiliateEntryShape = {
   position: true,
   name: true,
-  bps: true,
+  bps: nullable(),
   bpsSource: true,
-  affiliateId: true,
-  scope: true,
+  affiliateId: optional(),
+  scope: optional(),
 } satisfies Shape<ExpectedAffiliateEntry>;
 
 const transactionShape = {
@@ -439,27 +449,27 @@ const transactionShape = {
   destination: swapOutputShape,
   route: routeInfoShape,
   fees: quoteFeesShape,
-  affiliateFeeBreakdown: affiliateFeeBreakdownShape,
-  error: swapFailureShape,
-  refund: refundShape,
+  affiliateFeeBreakdown: optional(affiliateFeeBreakdownShape),
+  error: optional(swapFailureShape),
+  refund: optional(refundShape),
   timestamps: swapTimestampsShape,
-  expectedMemo: true,
+  expectedMemo: optional(),
   expectedAffiliateEntries: [expectedAffiliateEntryShape],
-  expectedReferrerAddress: true,
-  selectedProviderAffiliateCompositionId: true,
-  memoVerifiedAt: true,
+  expectedReferrerAddress: optional(),
+  selectedProviderAffiliateCompositionId: optional(),
+  memoVerifiedAt: optional(),
 } satisfies Shape<Transaction>;
 
 export const transactionsResponseShape: FieldShape = {
   transactions: [transactionShape],
-  pagination: { nextCursor: true, hasMore: true },
+  pagination: { nextCursor: nullable(), hasMore: true },
 } satisfies Shape<TransactionsResponse>;
 
 // ─── Webhooks ───
 
 const webhookStreamingProgressShape = {
   ...streamingProgressShape,
-  failureContext: true,
+  failureContext: nullable(),
 } satisfies Shape<WebhookStreamingProgress>;
 
 const transactionWebhookEventShape = {
@@ -471,14 +481,21 @@ const transactionWebhookEventShape = {
     internalStatus: true,
     previousStatus: true,
     internalPreviousStatus: true,
-    route: { provider: true, subprovider: true, private: true },
-    input: { chain: true, token: true, amount: true, address: true, refundAddress: true, txHash: true },
+    route: { provider: true, subprovider: optional(), private: optional() },
+    input: {
+      chain: true,
+      token: true,
+      amount: true,
+      address: optional(),
+      refundAddress: optional(),
+      txHash: optional(),
+    },
     output: swapOutputShape,
     fees: quoteFeesShape,
     timestamps: swapTimestampsShape,
-    error: swapFailureShape,
-    refund: refundShape,
-    streamingProgress: webhookStreamingProgressShape,
+    error: nullable(swapFailureShape),
+    refund: nullable(refundShape),
+    streamingProgress: nullable(webhookStreamingProgressShape),
   } satisfies Shape<TransactionWebhookData>,
 } satisfies Shape<TransactionWebhookEvent>;
 

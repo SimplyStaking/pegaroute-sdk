@@ -73,6 +73,22 @@ app.post("/webhooks/pegaroute", async (c) => {
   }
 });
 
+/**
+ * Pegaroute statuses the frontend can act on, passed through: fix the input (400), not found (404), confirm a new
+ * quote (409), get a new quote (410), the swap can't be done (422), or wait and retry (429).
+ */
+const PASS_THROUGH_STATUSES = new Set([400, 404, 409, 410, 422, 429]);
+
+/**
+ * The status to send the frontend for an SDK error. Anything else is a 502: our API key was rejected (401, 403),
+ * Pegaroute or a provider failed (5xx), or Pegaroute couldn't be reached (no status).
+ */
+function statusForFrontend(error: PegarouteError): ContentfulStatusCode {
+  return error.status !== null && PASS_THROUGH_STATUSES.has(error.status)
+    ? (error.status as ContentfulStatusCode)
+    : 502;
+}
+
 // Turn SDK errors into responses the frontend can show.
 app.onError((error, c) => {
   // The quoted route is gone: hand the frontend the new quote to confirm and retry with.
@@ -80,9 +96,9 @@ app.onError((error, c) => {
     return c.json({ error: error.userMessage, newQuote: error.newQuote }, 409);
   }
 
-  // Any other API error: pass on its status, or 502 when Pegaroute couldn't be reached.
+  // Any other API error: a status the frontend can act on, or 502.
   if (error instanceof PegarouteError) {
-    return c.json({ error: error.userMessage, code: error.code }, (error.status ?? 502) as ContentfulStatusCode);
+    return c.json({ error: error.userMessage, code: error.code }, statusForFrontend(error));
   }
 
   console.error(error);

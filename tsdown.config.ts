@@ -5,7 +5,8 @@ const config: UserConfig = defineConfig({
     index: "src/index.ts",
     types: "src/types/index.ts",
   },
-  format: ["esm", "cjs"],
+  // ESM only: Node 22.12+ can still `require()` it from CommonJS.
+  format: ["esm"],
   platform: "neutral",
   target: "es2023",
   dts: true,

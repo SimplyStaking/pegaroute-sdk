@@ -20,8 +20,10 @@ export interface EvmApproval {
  * - `erc20-transfer`: send `transferAmount` of the source token to `to`.
  */
 export interface EvmSwapExecution {
+  /** Execution family: an EVM chain. */
   family: "evm";
 
+  /** How to send it: call a contract, send the native gas token, or send an ERC-20 token. */
   mode: "contract-call" | "native-transfer" | "erc20-transfer";
 
   /** When present, sign `message` with EIP-191 `personal_sign` first and submit the signature with the tx hash. */
@@ -54,8 +56,10 @@ export interface EvmSwapExecution {
 
 /** Send `amount` to `to` with `memo` as an OP_RETURN output. Used for BTC, LTC, BCH, DOGE, DASH and ZEC. */
 export interface UtxoSwapExecution {
+  /** Execution family: a Bitcoin-like chain. */
   family: "utxo";
 
+  /** Send a payment with an OP_RETURN memo. */
   mode: "payment-with-memo";
 
   /** Deposit address. */
@@ -73,8 +77,10 @@ export interface UtxoSwapExecution {
 
 /** Send a standard Cosmos `MsgSend` to the provider's inbound address. */
 export interface CosmosBankSendSwapExecution {
+  /** Execution family: a Cosmos chain. */
   family: "cosmos";
 
+  /** Send a `MsgSend`. */
   mode: "bank-send";
 
   /** Inbound address. */
@@ -89,8 +95,10 @@ export interface CosmosBankSendSwapExecution {
 
 /** Send a native `MsgDeposit` on THORChain or Maya. */
 export interface CosmosMsgDepositSwapExecution {
+  /** Execution family: THORChain and Maya are Cosmos chains. */
   family: "cosmos";
 
+  /** Send a `MsgDeposit`. */
   mode: "msg-deposit";
 
   /** Inbound address. */
@@ -111,8 +119,10 @@ export interface CosmosMsgDepositSwapExecution {
 
 /** Sign and broadcast a provider-built Cosmos message (IBC transfer or CosmWasm execute) unchanged. */
 export interface CosmosMsgExecuteSwapExecution {
+  /** Execution family: a Cosmos chain. */
   family: "cosmos";
 
+  /** Broadcast `messageJson` unchanged. */
   mode: "msg-execute";
 
   /** JSON-encoded `{ typeUrl, value }` message. Pass it through as-is; never rebuild it. */
@@ -130,8 +140,10 @@ export interface CosmosMsgExecuteSwapExecution {
 
 /** Sign a fully built transaction: Solana base64, Sui transaction, Bitcoin hex PSBT or Stellar XDR. */
 export interface SerializedSwapExecution {
+  /** Execution family: says how `serializedTransaction` is encoded. */
   family: "solana" | "sui" | "utxo" | "stellar";
 
+  /** Sign `serializedTransaction`. */
   mode: "serialized-tx";
 
   /** The encoded transaction to sign. */
@@ -143,8 +155,10 @@ export interface SerializedSwapExecution {
 
 /** Sign a JSON-described XRPL or Stellar payment. */
 export interface JsonSwapExecution {
+  /** Execution family: XRPL or Stellar. */
   family: "xrp" | "stellar";
 
+  /** Sign the payment in `transactionJson`. */
   mode: "transaction-json";
 
   /** Destination address. */
@@ -156,8 +170,10 @@ export interface JsonSwapExecution {
 
 /** Send `amount` to a deposit address on a chain with its own execution family. */
 export interface NamedDepositSwapExecution {
+  /** Execution family of the chain to deposit on. */
   family: "solana" | "sui" | "xrp" | "tron" | "near" | "hypercore" | "cardano";
 
+  /** Send `amount` to the deposit address `to`. */
   mode: "deposit-transfer";
 
   /** Deposit address. */
@@ -172,8 +188,10 @@ export interface NamedDepositSwapExecution {
 
 /** Send `amount` to a deposit address on a chain without a dedicated execution family (see `chain`). */
 export interface OtherDepositSwapExecution {
+  /** No dedicated execution family: `chain` says which chain. */
   family: "other";
 
+  /** Send `amount` to the deposit address `to`. */
   mode: "deposit-transfer";
 
   /** Pegaroute chain ID, e.g. `"APTOS"`. */
@@ -193,9 +211,9 @@ export interface OtherDepositSwapExecution {
  * What the user's wallet must sign to fund a swap. Switch on `family` and `mode`, never on the provider name.
  *
  * @example
- * if (isEvmExecution(execution)) {
+ * if (isExecutionFamily(execution, "evm")) {
  *   // execution is EvmSwapExecution
- * } else if (isUtxoExecution(execution)) {
+ * } else if (isExecutionFamily(execution, "utxo")) {
  *   // execution.mode is "payment-with-memo" | "serialized-tx"
  * }
  */
@@ -253,35 +271,17 @@ export function isExecutionMode<M extends ExecutionMode>(
   return execution.mode === mode;
 }
 
-/** Narrows an execution to the variants of one family. Prefer the named guards (`isEvmExecution`, …) where they exist. */
+/**
+ * Narrows an execution to the variants of one family.
+ *
+ * @example
+ * if (isExecutionFamily(execution, "evm")) {
+ *   // execution.mode is "contract-call" | "native-transfer" | "erc20-transfer"
+ * }
+ */
 export function isExecutionFamily<F extends ExecutionFamily>(
   execution: SwapExecution,
   family: F,
 ): execution is ExecutionOfFamily<F> {
   return execution.family === family;
-}
-
-/** EVM chains: contract call, native transfer or ERC-20 transfer. */
-export function isEvmExecution(execution: SwapExecution): execution is ExecutionOfFamily<"evm"> {
-  return isExecutionFamily(execution, "evm");
-}
-
-/** Bitcoin-like chains: payment with memo, or a PSBT (`serialized-tx`). */
-export function isUtxoExecution(execution: SwapExecution): execution is ExecutionOfFamily<"utxo"> {
-  return isExecutionFamily(execution, "utxo");
-}
-
-/** Cosmos chains, including THORChain and Maya: bank send, msg-deposit or msg-execute. */
-export function isCosmosExecution(execution: SwapExecution): execution is ExecutionOfFamily<"cosmos"> {
-  return isExecutionFamily(execution, "cosmos");
-}
-
-/** Solana: serialized transaction or deposit transfer. */
-export function isSolanaExecution(execution: SwapExecution): execution is ExecutionOfFamily<"solana"> {
-  return isExecutionFamily(execution, "solana");
-}
-
-/** Sui: serialized transaction or deposit transfer. */
-export function isSuiExecution(execution: SwapExecution): execution is ExecutionOfFamily<"sui"> {
-  return isExecutionFamily(execution, "sui");
 }

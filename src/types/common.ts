@@ -101,7 +101,10 @@ export interface OpenOceanRouteMeta {
 
   /** Every aggregator OpenOcean considered for the quote. */
   dexes?: Array<{
+    /** Index of the aggregator. */
     dexId?: number;
+
+    /** Name of the aggregator. */
     dexCode?: string;
   }>;
 }
@@ -181,8 +184,13 @@ export interface StreamingProgress {
 
   /** Amount refunded so far, when some sub-swaps could not execute. */
   partialRefund?: {
+    /** Amount refunded, in the same format as `partialOutput`. */
     amount: string;
+
+    /** Chain the refund was sent on. */
     chain: string;
+
+    /** Token refunded. */
     token: string;
   };
 }

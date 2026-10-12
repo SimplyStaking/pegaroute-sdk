@@ -10,7 +10,9 @@ TypeScript SDK for the Pegaroute cross-chain swap API.
 npm install @pegaroute/sdk
 ```
 
-Requires Node.js 22+ (or Bun / Deno).
+Requires Node.js 22.12+ (or Bun / Deno). The package is ESM only: use `import`, or `require()` from CommonJS, which
+Node supports from 22.12. Where `require()` of ESM isn't available, CommonJS code can load it with
+`const { Pegaroute } = await import("@pegaroute/sdk");`.
 
 The client holds your API key, so **only use it on your backend**, never in browser code. Your frontend talks to your
 backend, and has the user's wallet sign each swap with your wallet library of choice (e.g. viem). The SDK doesn't sign:
@@ -50,11 +52,13 @@ if (best) {
 `swap.execution` says what the user's wallet must sign. For an EVM router call (e.g. THORChain):
 
 ```ts
-import { isEvmExecution, isExecutionMode, type SwapExecution } from "@pegaroute/sdk/types";
+import { isExecutionFamily, isExecutionMode, type SwapExecution } from "@pegaroute/sdk/types";
 import { type Address, createWalletClient, custom, type Hex } from "viem";
 
 async function signSwap(execution: SwapExecution) {
-  if (!isEvmExecution(execution) || !isExecutionMode(execution, "contract-call")) throw new Error("Not handled here");
+  if (!isExecutionFamily(execution, "evm") || !isExecutionMode(execution, "contract-call")) {
+    throw new Error("Not handled here");
+  }
 
   const wallet = createWalletClient({ transport: custom(window.ethereum!) });
   const [account] = await wallet.requestAddresses();
@@ -88,8 +92,8 @@ switch (execution.family) {
 if (isExecutionMode(execution, "deposit-transfer")) showDeposit(execution.to, execution.amount, execution.memo);
 ```
 
-The guards `isEvmExecution`, `isUtxoExecution`, `isCosmosExecution`, `isSolanaExecution`, `isSuiExecution`,
-`isExecutionFamily` and `isExecutionMode` narrow `execution` to the matching types. Each type documents what to sign.
+The guards `isExecutionFamily(execution, family)` and `isExecutionMode(execution, mode)` narrow `execution` to the
+matching types. Each type documents what to sign.
 
 ## Report the tx hash and track status (backend)
 
@@ -122,7 +126,8 @@ if (event.event === "transaction.completed") {
 ```
 
 `verifyWebhook` throws `WebhookVerificationError` for a missing or wrong signature: respond 401. Delivery is
-at-least-once, so handle events idempotently.
+at-least-once, so handle events idempotently. A delivery can be replayed, so confirm with `swaps.get` before acting on
+funds.
 
 ## Errors
 
@@ -144,7 +149,9 @@ try {
 }
 ```
 
-GET requests are retried on 429, 503 and connection errors (`maxRetries`, default 2). POSTs are never retried.
+GET requests are retried on connection errors and on errors whose `retryable` is `true` (`maxRetries`, default 2).
+`retryable` is Pegaroute's own flag, or, when the response doesn't carry one (e.g. a proxy's error page), `true` for
+429, 502, 503 and 504. POSTs are never retried.
 
 ## Statuses
 
@@ -177,8 +184,9 @@ the ERC-20 approval.
 ```sh
 bun install
 bun test                    # unit tests
+bun run test:node           # built package on real Node (needs Node ≥22.12, see .node-version)
 bun run typecheck && bun run lint && bun run build
-bun run check:package       # package exports and types (after build)
+bun run check:package       # builds (prepack command), then checks package exports and types
 ```
 
 CI runs all of the above, plus `typecheck:examples`, on every pull request.

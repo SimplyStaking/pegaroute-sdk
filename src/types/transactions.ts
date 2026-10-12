@@ -119,7 +119,9 @@ export interface CursorPagination {
 
 /** One page of `transactions.list()`, newest swaps first. */
 export interface TransactionsResponse {
+  /** The swaps on this page. */
   transactions: Transaction[];
 
+  /** Whether more pages follow, and the cursor to fetch the next one. */
   pagination: CursorPagination;
 }

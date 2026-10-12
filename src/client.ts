@@ -19,7 +19,7 @@ export interface PegarouteOptions {
   /** Per-request timeout. Default 30 000 ms. */
   timeoutMs?: number;
 
-  /** Retries for GET requests on 429, 503 and connection errors. Default 2. */
+  /** Retries for GET requests on connection errors and on errors marked `retryable` (e.g. 429, 503). Default 2. */
   maxRetries?: number;
 
   /** Custom `fetch` implementation (tests, proxies). Default `globalThis.fetch`. */
@@ -33,7 +33,8 @@ let browserWarningShown = false;
 
 /** Pegaroute API client. Server-side only: it holds your API key. */
 export class Pegaroute {
-  protected readonly http: HttpClient;
+  /** The HTTP client that all resource namespaces (`quotes`, `swaps`, …) send their requests through. Internal only. */
+  readonly #http: HttpClient;
 
   /** Supported chains. */
   readonly chains: Chains;
@@ -78,7 +79,7 @@ export class Pegaroute {
     // SDK should warn if running in a browser environment as the client holds the API key that can be exposed by client-side code.
     warnIfBrowser();
 
-    this.http = new HttpClient({
+    this.#http = new HttpClient({
       apiKey,
       baseUrl: baseUrl.replace(/\/+$/, ""),
       timeoutMs,
@@ -89,12 +90,12 @@ export class Pegaroute {
     });
 
     // Resource namespaces share the one HTTP client.
-    this.chains = new Chains(this.http);
-    this.tokens = new Tokens(this.http);
-    this.providers = new Providers(this.http);
-    this.quotes = new Quotes(this.http);
-    this.swaps = new Swaps(this.http);
-    this.transactions = new Transactions(this.http);
+    this.chains = new Chains(this.#http);
+    this.tokens = new Tokens(this.#http);
+    this.providers = new Providers(this.#http);
+    this.quotes = new Quotes(this.#http);
+    this.swaps = new Swaps(this.#http);
+    this.transactions = new Transactions(this.#http);
   }
 
   /**
@@ -108,7 +109,7 @@ export class Pegaroute {
    * if (health.status === "degraded") alert(health);
    */
   health(options?: RequestOptions): Promise<HealthResponse> {
-    return this.http.request({ method: "GET", path: "/health", successStatuses: [503] }, options);
+    return this.#http.request({ method: "GET", path: "/health", successStatuses: [503] }, options);
   }
 
   /**
@@ -118,7 +119,7 @@ export class Pegaroute {
    * await pr.ping(); // { response: "pong", timestamp: "…", service: "pegaroute" }
    */
   ping(options?: RequestOptions): Promise<PingResponse> {
-    return this.http.request({ method: "GET", path: "/ping" }, options);
+    return this.#http.request({ method: "GET", path: "/ping" }, options);
   }
 }
 

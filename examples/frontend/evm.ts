@@ -10,7 +10,7 @@
  * - `sendEvmSwap(execution)`: browser-only. Asks the user's wallet to sign and send those transactions, and returns
  *   the swap's tx hash.
  */
-import { isEvmExecution, isExecutionMode, type SwapExecution } from "@pegaroute/sdk/types";
+import { isExecutionFamily, isExecutionMode, type SwapExecution } from "@pegaroute/sdk/types";
 import {
   type Address,
   createPublicClient,
@@ -46,7 +46,7 @@ export interface EvmTransaction {
  */
 export function evmTransactions(execution: SwapExecution): EvmTransaction[] {
   // This example only covers router contract calls; other execution modes need other wallet calls.
-  if (!isEvmExecution(execution) || !isExecutionMode(execution, "contract-call")) {
+  if (!isExecutionFamily(execution, "evm") || !isExecutionMode(execution, "contract-call")) {
     throw new Error(`This example doesn't handle ${execution.family} ${execution.mode} swaps`);
   }
 
@@ -99,7 +99,12 @@ export async function sendEvmSwap(execution: SwapExecution): Promise<Hash> {
   if (!account) throw new Error("No wallet account connected");
 
   const transactions = evmTransactions(execution);
-  await wallet.switchChain({ id: transactions[0]?.chainId ?? 1 });
+
+  // The approval and the swap are on the same chain, so switch once, to the first transaction's chain.
+  const [first] = transactions;
+  if (!first) throw new Error("No transactions to send");
+
+  await wallet.switchChain({ id: first.chainId });
 
   // Send each transaction, waiting for it to be mined so the swap only runs once its approval is in place.
   let hash: Hash | undefined;

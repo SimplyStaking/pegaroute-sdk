@@ -56,6 +56,10 @@ const HEX_DIGEST = /^[0-9a-f]{64}$/i;
  * The signature is an HMAC-SHA256 of the raw body, keyed with your webhook secret. Delivery is at-least-once, so
  * the same event can arrive more than once: make handlers idempotent.
  *
+ * The signature proves who sent the body, not when: it has no timestamp, and events carry no ID to deduplicate on,
+ * so anyone who obtains a delivery can send it again later and it still verifies. Treat an event as a hint and
+ * confirm with `swaps.get` before acting on funds.
+ *
  * Throws `WebhookVerificationError` when the delivery can't be trusted, and `TypeError` for a coding mistake
  * (`secret` missing, or `signature` neither a string nor an array).
  *
@@ -67,7 +71,11 @@ const HEX_DIGEST = /^[0-9a-f]{64}$/i;
  *       signature: req.headers["x-pegasus-signature"],
  *       secret: process.env.PEGAROUTE_WEBHOOK_SECRET!,
  *     });
- *     if (event.event === "transaction.completed") markPaid(event.data.transactionId);
+ *     if (event.event === "transaction.completed") {
+ *       // The event may be a replay: confirm the current state before acting on funds.
+ *       const swap = await pr.swaps.get(event.data.transactionId);
+ *       if (swap.status === "success") await markPaid(swap.transactionId); // idempotent
+ *     }
  *     res.sendStatus(200);
  *   } catch (e) {
  *     if (e instanceof WebhookVerificationError) return res.sendStatus(401);

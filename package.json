@@ -9,36 +9,23 @@
     "url": "git+https://github.com/SimplyStaking/pegaroute-sdk.git"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.12"
   },
   "packageManager": "bun@1.2.22",
   "sideEffects": false,
   "files": [
     "dist"
   ],
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
+  "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "require": {
-        "types": "./dist/index.d.cts",
-        "default": "./dist/index.cjs"
-      }
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     },
     "./types": {
-      "import": {
-        "types": "./dist/types.d.ts",
-        "default": "./dist/types.js"
-      },
-      "require": {
-        "types": "./dist/types.d.cts",
-        "default": "./dist/types.cjs"
-      }
+      "types": "./dist/types.d.ts",
+      "default": "./dist/types.js"
     },
     "./package.json": "./package.json"
   },
@@ -50,15 +37,17 @@
     }
   },
   "scripts": {
-    "build": "tsdown",
+    "build": "bun --bun tsdown",
+    "prepack": "bun run build",
     "typecheck": "tsc --noEmit",
-    "typecheck:examples": "tsdown && tsc -p examples",
+    "typecheck:examples": "bun run build && tsc -p examples",
     "lint": "biome check .",
-    "check:package": "publint && attw --pack .",
+    "check:package": "bun run prepack && publint && attw --pack . --profile esm-only",
     "format": "biome check --write .",
     "test": "bun test",
+    "test:node": "bun run build && node --test \"test/node/*.node.mjs\"",
     "test:e2e": "bun test --timeout 60000 --preload ./test/e2e/setup.ts ./test/e2e/*.e2e.ts",
-    "test:e2e:examples": "tsdown && bun test --timeout 60000 ./examples/examples.e2e.ts"
+    "test:e2e:examples": "bun run build && bun test --timeout 60000 ./examples/examples.e2e.ts"
   },
   "publishConfig": {
     "access": "public"

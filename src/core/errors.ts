@@ -1,40 +1,6 @@
+import type { ErrorCode } from "../types/errors.js";
 import type { QuoteResponse } from "../types/quotes.js";
 import type { GetSwapResponse } from "../types/swaps.js";
-
-/** Error codes Pegaroute is known to return. Other strings may appear as the API evolves. */
-export type KnownErrorCode =
-  // Server-side error codes returned by the Pegaroute API.
-  | "VALIDATION_ERROR"
-  | "UNAUTHORIZED"
-  | "NOT_FOUND"
-  | "UNSUPPORTED_PAIR"
-  | "AMOUNT_TOO_LOW"
-  | "INVALID_ADDRESS"
-  | "INVALID_AMOUNT"
-  | "QUOTE_MISMATCH"
-  | "QUOTE_EXPIRED"
-  | "PROVIDER_REJECTED"
-  | "PROVIDER_CHANGED"
-  | "PROVIDER_UNAVAILABLE"
-  | "PROVIDER_TIMEOUT"
-  | "MEMO_TOO_LONG"
-  | "SLIPPAGE_EXCEEDED"
-  | "RATE_LIMITED"
-  | "CHAIN_HALTED"
-  | "CHAIN_DISABLED"
-  | "MISSING_QUOTE_DATA"
-  | "BROADCAST_FAILED"
-  | "INTERNAL_ERROR"
-
-  // Produced by the SDK itself, never by the server.
-  | "CONNECTION_ERROR"
-  | "TIMEOUT"
-  | "INVALID_RESPONSE"
-  | "WAIT_TIMEOUT"
-  | "UNKNOWN_ERROR";
-
-// Any error code, including unknown ones returned by the API as it evolves.
-export type ErrorCode = KnownErrorCode | (string & {});
 
 /**
  * The data needed to create a {@link PegarouteError} ("Init" = initialisation).
@@ -76,6 +42,7 @@ export interface PegarouteErrorInit {
 
 /** Base class for every error the SDK throws after a request is made. */
 export class PegarouteError extends Error {
+  /** Machine-readable error code, e.g. `QUOTE_EXPIRED`. */
   readonly code: ErrorCode;
 
   /** HTTP status, or `null` when no response was received. */
@@ -83,11 +50,21 @@ export class PegarouteError extends Error {
 
   /** Safe to show to end users. */
   readonly userMessage: string;
+
+  /**
+   * Whether the same request may succeed if tried again.
+   * The SDK retries such GETs itself, up to `maxRetries` times, unless the server asks to wait more than 60 seconds.
+   * POSTs are never retried, so retrying one is up to you.
+   */
   readonly retryable: boolean;
+
+  /** Seconds the server asked us to wait before retrying, or `null` when it didn't say. */
   readonly retryAfterSeconds: number | null;
 
   /** Provider that caused the error, when the failure is provider-specific. */
   readonly provider?: string;
+
+  /** Extra context from the server (or the SDK) about the failure. */
   readonly details?: Record<string, unknown>;
 
   constructor(init: PegarouteErrorInit) {
@@ -105,10 +82,19 @@ export class PegarouteError extends Error {
   }
 }
 
+/** The request is invalid, e.g. a bad address, amount or unsupported pair (HTTP 400). */
 export class BadRequestError extends PegarouteError {}
+
+/** The API key is missing or invalid (HTTP 401). */
 export class AuthenticationError extends PegarouteError {}
+
+/** The API key isn't allowed to make this request (HTTP 403). */
 export class PermissionDeniedError extends PegarouteError {}
+
+/** The resource doesn't exist, e.g. an unknown swap ID (HTTP 404). */
 export class NotFoundError extends PegarouteError {}
+
+/** The request conflicts with the current state (HTTP 409). See {@link ProviderChangedError} for a changed provider. */
 export class ConflictError extends PegarouteError {}
 
 /** The data needed to create a {@link ProviderChangedError}: the base fields plus the refreshed quote. */
@@ -153,11 +139,17 @@ export class ProviderChangedError extends ConflictError {
 
 /** The quote is no longer valid; request a new one. */
 export class QuoteExpiredError extends PegarouteError {}
+
+/** The request is well-formed but can't be carried out, e.g. the memo is too long (HTTP 422). */
 export class UnprocessableEntityError extends PegarouteError {}
+
+/** Too many requests (HTTP 429). `retryAfterSeconds` says how long to wait, when the server sends it. */
 export class RateLimitError extends PegarouteError {}
 
 /** A chain is halted or disabled, or a provider is down. */
 export class ServiceUnavailableError extends PegarouteError {}
+
+/** Pegaroute, a provider or a gateway in front of it failed (HTTP 500, 502, 504 or another 5xx except 503). */
 export class InternalServerError extends PegarouteError {}
 
 /**
@@ -222,6 +214,12 @@ const ERROR_CLASS_BY_STATUS: Record<number, typeof PegarouteError> = {
   503: ServiceUnavailableError,
 };
 
+/**
+ * Statuses worth trying again when the error body doesn't say: rate limited, or a temporary gateway or availability
+ * failure (often a proxy's own error page, without Pegaroute's error envelope).
+ */
+const RETRYABLE_STATUSES = new Set([429, 502, 503, 504]);
+
 /** Exact status match first, then any other 5xx → `InternalServerError`, otherwise the base class. */
 function errorClassForStatus(status: number): typeof PegarouteError {
   return ERROR_CLASS_BY_STATUS[status] ?? (status >= 500 ? InternalServerError : PegarouteError);
@@ -238,13 +236,27 @@ function errorClassForStatus(status: number): typeof PegarouteError {
  * parsing stays lenient so a missing field never hides the real error.
  */
 interface PegarouteErrorEnvelope {
+  /** The error itself; each field becomes the {@link PegarouteError} field of the same name. */
   error: {
+    /** Machine-readable error code. */
     code: string;
+
+    /** Technical message. */
     message: string;
+
+    /** Message safe to show to end users. */
     userMessage?: string;
+
+    /** Whether the same request may succeed if tried again. */
     retryable?: boolean;
+
+    /** Seconds to wait before retrying, if any. */
     retryAfterSeconds?: number | null;
+
+    /** Provider that caused the error. */
     provider?: string;
+
+    /** Extra context about the failure. */
     details?: Record<string, unknown>;
   };
 }
@@ -267,8 +279,13 @@ export function isPegarouteErrorEnvelope(value: unknown): value is PegarouteErro
  * { "error": { "code": "PROVIDER_CHANGED", … }, "newQuote": { "quoteId": "…", … }, "originalProvider": "maya", "newProvider": "thorchain" }
  */
 interface ProviderChangedBody {
+  /** The refreshed quote. */
   newQuote: QuoteResponse;
+
+  /** The provider that was quoted prior to the change. */
   originalProvider: string;
+
+  /** The best provider under the refreshed quote. */
   newProvider: string;
 }
 
@@ -284,7 +301,11 @@ function isProviderChangedBody(value: object): value is ProviderChangedBody {
   );
 }
 
-/** Builds the matching error subclass from a non-2xx response and its (already read) body text. */
+/**
+ * Builds the matching error subclass from a non-2xx response and its (already read) body text.
+ *
+ * `retryable` is the server's own flag when its error body has one, otherwise it follows RETRYABLE_STATUSES. The HTTP client retries a GET only when it is `true`, so callers see the same answer the SDK acted on.
+ */
 export function errorFromResponse(response: Response, bodyText: string): PegarouteError {
   // Determine the appropriate error class based on the HTTP status code.
   const ErrorClass = errorClassForStatus(response.status);
@@ -304,7 +325,7 @@ export function errorFromResponse(response: Response, bodyText: string): Pegarou
       status: response.status,
       message: `HTTP ${response.status} ${response.statusText}`.trim(),
       userMessage: "Something went wrong. Please try again.",
-      retryable: false,
+      retryable: RETRYABLE_STATUSES.has(response.status),
       details: { body: bodyText.slice(0, 500) },
     });
   }
@@ -316,7 +337,7 @@ export function errorFromResponse(response: Response, bodyText: string): Pegarou
     status: response.status,
     message: error.message,
     userMessage: error.userMessage ?? error.message,
-    retryable: error.retryable ?? false,
+    retryable: error.retryable ?? RETRYABLE_STATUSES.has(response.status),
     retryAfterSeconds: error.retryAfterSeconds ?? null,
     ...(error.provider !== undefined && { provider: error.provider }),
     ...(error.details !== undefined && { details: error.details }),
