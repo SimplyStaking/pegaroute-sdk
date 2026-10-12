@@ -2,8 +2,6 @@
 
 TypeScript SDK for the Pegaroute cross-chain swap API.
 
-> Work in progress — not yet published.
-
 ## Install
 
 ```sh
