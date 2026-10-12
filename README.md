@@ -126,7 +126,8 @@ if (event.event === "transaction.completed") {
 ```
 
 `verifyWebhook` throws `WebhookVerificationError` for a missing or wrong signature: respond 401. Delivery is
-at-least-once, so handle events idempotently.
+at-least-once, so handle events idempotently. A delivery can be replayed, so confirm with `swaps.get` before acting on
+funds.
 
 ## Errors
 

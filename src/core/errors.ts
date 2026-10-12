@@ -53,8 +53,8 @@ export class PegarouteError extends Error {
 
   /**
    * Whether the same request may succeed if tried again.
-   * When `true` on a GET, the SDK has already retried it (up to `maxRetries` times) before throwing. POSTs are never
-   * retried, so retrying one is up to you.
+   * The SDK retries such GETs itself, up to `maxRetries` times, unless the server asks to wait more than 60 seconds.
+   * POSTs are never retried, so retrying one is up to you.
    */
   readonly retryable: boolean;
 

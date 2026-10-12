@@ -71,7 +71,11 @@ const HEX_DIGEST = /^[0-9a-f]{64}$/i;
  *       signature: req.headers["x-pegasus-signature"],
  *       secret: process.env.PEGAROUTE_WEBHOOK_SECRET!,
  *     });
- *     if (event.event === "transaction.completed") markPaid(event.data.transactionId);
+ *     if (event.event === "transaction.completed") {
+ *       // The event may be a replay: confirm the current state before acting on funds.
+ *       const swap = await pr.swaps.get(event.data.transactionId);
+ *       if (swap.status === "success") await markPaid(swap.transactionId); // idempotent
+ *     }
  *     res.sendStatus(200);
  *   } catch (e) {
  *     if (e instanceof WebhookVerificationError) return res.sendStatus(401);
