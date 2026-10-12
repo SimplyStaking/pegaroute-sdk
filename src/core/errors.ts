@@ -42,6 +42,7 @@ export interface PegarouteErrorInit {
 
 /** Base class for every error the SDK throws after a request is made. */
 export class PegarouteError extends Error {
+  /** Machine-readable error code, e.g. `QUOTE_EXPIRED`. */
   readonly code: ErrorCode;
 
   /** HTTP status, or `null` when no response was received. */
@@ -49,11 +50,21 @@ export class PegarouteError extends Error {
 
   /** Safe to show to end users. */
   readonly userMessage: string;
+
+  /**
+   * Whether the same request may succeed if tried again.
+   * When `true` on a GET, the SDK has already retried it (up to `maxRetries` times) before throwing. POSTs are never
+   * retried, so retrying one is up to you.
+   */
   readonly retryable: boolean;
+
+  /** Seconds the server asked us to wait before retrying, or `null` when it didn't say. */
   readonly retryAfterSeconds: number | null;
 
   /** Provider that caused the error, when the failure is provider-specific. */
   readonly provider?: string;
+
+  /** Extra context from the server (or the SDK) about the failure. */
   readonly details?: Record<string, unknown>;
 
   constructor(init: PegarouteErrorInit) {
@@ -71,10 +82,19 @@ export class PegarouteError extends Error {
   }
 }
 
+/** The request is invalid, e.g. a bad address, amount or unsupported pair (HTTP 400). */
 export class BadRequestError extends PegarouteError {}
+
+/** The API key is missing or invalid (HTTP 401). */
 export class AuthenticationError extends PegarouteError {}
+
+/** The API key isn't allowed to make this request (HTTP 403). */
 export class PermissionDeniedError extends PegarouteError {}
+
+/** The resource doesn't exist, e.g. an unknown swap ID (HTTP 404). */
 export class NotFoundError extends PegarouteError {}
+
+/** The request conflicts with the current state (HTTP 409). See {@link ProviderChangedError} for a changed provider. */
 export class ConflictError extends PegarouteError {}
 
 /** The data needed to create a {@link ProviderChangedError}: the base fields plus the refreshed quote. */
@@ -119,11 +139,17 @@ export class ProviderChangedError extends ConflictError {
 
 /** The quote is no longer valid; request a new one. */
 export class QuoteExpiredError extends PegarouteError {}
+
+/** The request is well-formed but can't be carried out, e.g. the memo is too long (HTTP 422). */
 export class UnprocessableEntityError extends PegarouteError {}
+
+/** Too many requests (HTTP 429). `retryAfterSeconds` says how long to wait, when the server sends it. */
 export class RateLimitError extends PegarouteError {}
 
 /** A chain is halted or disabled, or a provider is down. */
 export class ServiceUnavailableError extends PegarouteError {}
+
+/** Pegaroute, a provider or a gateway in front of it failed (HTTP 500, 502, 504 or another 5xx except 503). */
 export class InternalServerError extends PegarouteError {}
 
 /**
@@ -210,13 +236,27 @@ function errorClassForStatus(status: number): typeof PegarouteError {
  * parsing stays lenient so a missing field never hides the real error.
  */
 interface PegarouteErrorEnvelope {
+  /** The error itself; each field becomes the {@link PegarouteError} field of the same name. */
   error: {
+    /** Machine-readable error code. */
     code: string;
+
+    /** Technical message. */
     message: string;
+
+    /** Message safe to show to end users. */
     userMessage?: string;
+
+    /** Whether the same request may succeed if tried again. */
     retryable?: boolean;
+
+    /** Seconds to wait before retrying, if any. */
     retryAfterSeconds?: number | null;
+
+    /** Provider that caused the error. */
     provider?: string;
+
+    /** Extra context about the failure. */
     details?: Record<string, unknown>;
   };
 }
@@ -239,8 +279,13 @@ export function isPegarouteErrorEnvelope(value: unknown): value is PegarouteErro
  * { "error": { "code": "PROVIDER_CHANGED", … }, "newQuote": { "quoteId": "…", … }, "originalProvider": "maya", "newProvider": "thorchain" }
  */
 interface ProviderChangedBody {
+  /** The refreshed quote. */
   newQuote: QuoteResponse;
+
+  /** The provider that was quoted prior to the change. */
   originalProvider: string;
+
+  /** The best provider under the refreshed quote. */
   newProvider: string;
 }
 

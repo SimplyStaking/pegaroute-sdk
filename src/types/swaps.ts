@@ -118,14 +118,19 @@ export interface ProviderStatusInfo {
 
 /** One fee line in an Instaswap deposit quote. */
 export interface InstaswapFeeLine {
+  /** Fee kind as Instaswap names it, e.g. `"subAffiliate"`. */
   type?: string;
 
+  /** Display label for the fee. */
   name?: string;
 
+  /** Fee in USD. A JavaScript number as Pegaroute sends it: for display only, may be imprecise. */
   amountUsd?: number;
 
+  /** Asset the fee is charged in. */
   asset?: string;
 
+  /** Fee in `asset`. A JavaScript number as Pegaroute sends it: for display only, may be imprecise. */
   amount?: number;
 }
 

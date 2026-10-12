@@ -30,5 +30,5 @@ export type KnownErrorCode =
   | "WAIT_TIMEOUT"
   | "UNKNOWN_ERROR";
 
-// Any error code, including unknown ones returned by the API as it evolves.
+/** Any error code, including unknown ones returned by the API as it evolves. */
 export type ErrorCode = KnownErrorCode | (string & {});

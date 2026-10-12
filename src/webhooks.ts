@@ -56,6 +56,10 @@ const HEX_DIGEST = /^[0-9a-f]{64}$/i;
  * The signature is an HMAC-SHA256 of the raw body, keyed with your webhook secret. Delivery is at-least-once, so
  * the same event can arrive more than once: make handlers idempotent.
  *
+ * The signature proves who sent the body, not when: it has no timestamp, and events carry no ID to deduplicate on,
+ * so anyone who obtains a delivery can send it again later and it still verifies. Treat an event as a hint and
+ * confirm with `swaps.get` before acting on funds.
+ *
  * Throws `WebhookVerificationError` when the delivery can't be trusted, and `TypeError` for a coding mistake
  * (`secret` missing, or `signature` neither a string nor an array).
  *

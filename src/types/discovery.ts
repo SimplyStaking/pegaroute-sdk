@@ -12,6 +12,7 @@ export interface Chain {
 
 /** Response of `chains.list()`. */
 export interface ChainsResponse {
+  /** Every chain Pegaroute can route to or from. */
   chains: Chain[];
 }
 
@@ -29,6 +30,7 @@ export interface TokensResponse {
   /** Canonical ID of the requested chain (the lookup ignores case). */
   chain: string;
 
+  /** Tokens Pegaroute recognises on that chain. */
   tokens: Token[];
 }
 
@@ -79,6 +81,7 @@ export interface ProviderTakeStructure {
 
 /** A provider's documented affiliate fee range and its cut of that fee. */
 export interface ProviderFeeStructure {
+  /** The affiliate fee range the provider accepts. */
   affiliateFee: ProviderAffiliateFeeStructure;
 
   /** Provider's cut of the affiliate fee, or `null` when it takes none. */
@@ -137,6 +140,10 @@ export interface ListProvidersParams {
 
 /** Response of `providers.list()`. */
 export interface ProvidersResponse {
+  /**
+   * The providers that are switched on, with their live status. Providers that are switched off
+   * (`routingEnabled: false`) are also listed when you call `providers.list({ includeDisabled: true })`.
+   */
   providers: ProviderInfo[];
 }
 
@@ -150,12 +157,16 @@ export interface HealthResponse {
 
   /** Database connectivity. Reports `connected: false` when Pegaroute runs without a database. */
   db: {
+    /** Whether the database answered. */
     connected: boolean;
+
+    /** Latency of the database check, in milliseconds. */
     latencyMs: number;
   };
 
   /** Write-ahead log backlog. `pendingEntries` is `-1` when it can't be read. */
   wal: {
+    /** Writes buffered while the database was unavailable and not yet replayed, or `-1` when unknown. */
     pendingEntries: number;
   };
 

@@ -43,11 +43,13 @@ export type QueryParams = Record<string, string | number | boolean | undefined>;
 
 /** One API call, described independently of how it is sent. */
 export interface HttpRequest {
+  /** HTTP method. Only GETs are retried. */
   method: "GET" | "POST";
 
   /** Endpoint path starting with `/`, e.g. `/quote`. */
   path: string;
 
+  /** Query string parameters; `undefined` values are left out. */
   query?: QueryParams;
 
   /** JSON body; serialised with `JSON.stringify`. */
