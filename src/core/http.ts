@@ -5,6 +5,7 @@ import {
   PegarouteError,
   TimeoutError,
 } from "./errors.js";
+import { sleep } from "./sleep.js";
 import { assertIntegerAtLeast } from "./validation.js";
 
 /** Per-call options accepted by every SDK method. */
@@ -244,23 +245,4 @@ function backoffMs(attempt: number): number {
   const base = Math.min(INITIAL_BACKOFF_MS * 2 ** attempt, MAX_BACKOFF_MS);
 
   return base * (0.75 + Math.random() * 0.5);
-}
-
-/** Waits `ms`, but stops early (rejecting) if the caller's signal aborts. */
-export function sleep(ms: number, signal: AbortSignal | undefined): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal?.aborted) return reject(signal.reason);
-
-    const timer = setTimeout(() => {
-      signal?.removeEventListener("abort", onAbort);
-      resolve();
-    }, ms);
-
-    function onAbort(): void {
-      clearTimeout(timer);
-      reject(signal?.reason);
-    }
-
-    signal?.addEventListener("abort", onAbort, { once: true });
-  });
 }

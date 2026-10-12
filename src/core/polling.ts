@@ -1,4 +1,4 @@
-import { sleep } from "./http.js";
+import { sleep } from "./sleep.js";
 
 /** How {@link pollUntil} fetches a value, when it stops, and what it throws on timeout. */
 export interface PollUntilConfig<T> {
