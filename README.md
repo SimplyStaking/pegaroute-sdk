@@ -189,10 +189,11 @@ bun run typecheck && bun run lint && bun run build
 bun run check:package       # builds (prepack command), then checks package exports and types
 ```
 
-CI runs all of the above, plus `typecheck:examples`, on every pull request.
+CI runs all of the above, plus `typecheck:examples`, on every pull request. These are the checks contributors run.
 
-End-to-end tests run against a local Pegaroute (`docker compose up -d --build` in the Pegaroute repo). Copy
-[`.env.example`](.env.example) to `.env` and fill it in; it explains what each variable needs.
+End-to-end tests are for maintainers only: they need a local Pegaroute, started from the private Pegaroute repo
+(`docker compose up -d --build`), and an operator login. Copy [`.env.example`](.env.example) to `.env` and fill it in;
+it explains what each variable needs.
 
 ```sh
 bun run test:e2e            # REST endpoints and webhooks
