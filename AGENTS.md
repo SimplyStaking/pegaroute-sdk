@@ -29,10 +29,10 @@ Bun for install, tests and scripts. See the README's [Development](README.md#dev
 ## Conventions
 
 - `@pegaroute/sdk/types` must stay browser-safe: types and guards only, never the client or anything holding the key. For this reason `src/types/` never imports from `src/core/` (or anything else outside `src/types/`).
-- Types follow what the Pegaroute server returns at runtime (the `../pegasus` source), not the OpenAPI spec. Always
-  present but nullable → `T | null`; omitted when unset → `field?: T`. Money is a `string` or `TokenAmount`, never a
-  number.
-- Never modify `../pegasus`. Its bugs and doc mismatches are reported to its maintainers, not fixed here.
+- Types follow what the Pegaroute server returns at runtime (check its source, e.g. a local checkout at `../pegasus`),
+  not the OpenAPI spec. Always present but nullable → `T | null`; omitted when unset → `field?: T`. Money is a `string`
+  or `TokenAmount`, never a number.
+- Never change the Pegaroute server from this repo. Report its bugs and doc mismatches to the Pegaroute team instead.
 - `isolatedDeclarations` is on: exported functions need explicit return types.
 - Style: JSDoc on every exported type, field and function; a blank line between logical blocks and between documented
   fields; a short `//` comment before each non-obvious step saying what and why. Readability first.
