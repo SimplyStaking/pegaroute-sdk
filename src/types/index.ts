@@ -1,16 +1,20 @@
 // Browser-safe entry: types and type guards only. Never import the client here.
 
-export type {
-  AffiliateFeeBreakdown,
-  KnownProvider,
-  OpenOceanRouteMeta,
-  PrivateSwapMode,
-  Provider,
-  QuoteFees,
-  RefundInfo,
-  RouteInfo,
-  StreamingProgress,
-  TokenAmount,
+export {
+  type AdditionalFee,
+  type AffiliateFeeBreakdown,
+  type FeeAmount,
+  hasQuoteRouteFees,
+  type KnownProvider,
+  type NoQuoteRouteFees,
+  type OpenOceanRouteMeta,
+  type PrivateSwapMode,
+  type Provider,
+  type QuoteRouteFees,
+  type RefundInfo,
+  type RouteInfo,
+  type StreamingProgress,
+  type TokenAmount,
 } from "./common.js";
 export type {
   Chain,
@@ -49,7 +53,12 @@ export {
   type SwapExecution,
   type UtxoSwapExecution,
 } from "./execution.js";
-export type { GetQuoteParams, QuoteResponse, QuoteRoute, RouteWarning } from "./quotes.js";
+export type {
+  GetQuoteParams,
+  QuoteResponse,
+  QuoteRoute,
+  RouteWarning,
+} from "./quotes.js";
 export { type InternalSwapStatus, isTerminalStatus, type SwapStatus, toExternalStatus } from "./status.js";
 export type {
   CreateSwapParams,

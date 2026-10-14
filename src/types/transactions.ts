@@ -1,4 +1,4 @@
-import type { AffiliateFeeBreakdown, Provider, QuoteFees, RefundInfo, RouteInfo } from "./common.js";
+import type { AffiliateFeeBreakdown, Provider, RefundInfo, RouteInfo } from "./common.js";
 import type { InternalSwapStatus, SwapStatus } from "./status.js";
 import type { SwapFailure, SwapInput, SwapOutput, SwapTimestamps } from "./swaps.js";
 
@@ -53,9 +53,6 @@ export interface Transaction {
 
   /** The route the swap executes on. */
   route: RouteInfo;
-
-  /** Fees for the swap. */
-  fees: QuoteFees;
 
   /** How the affiliate fee was split, when recorded. */
   affiliateFeeBreakdown?: AffiliateFeeBreakdown;

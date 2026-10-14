@@ -2,7 +2,6 @@ import type {
   AffiliateFeeBreakdown,
   PrivateSwapMode,
   Provider,
-  QuoteFees,
   RefundInfo,
   RouteInfo,
   StreamingProgress,
@@ -270,9 +269,6 @@ export interface GetSwapResponse {
 
   /** The destination side of the swap. */
   output: SwapOutput;
-
-  /** Fees for the swap. */
-  fees: QuoteFees;
 
   /** How the affiliate fee was split, when recorded. */
   affiliateFeeBreakdown?: AffiliateFeeBreakdown;

@@ -1,4 +1,11 @@
-import type { OpenOceanRouteMeta, PrivateSwapMode, Provider, QuoteFees } from "./common.js";
+import type {
+  AdditionalFee,
+  NoQuoteRouteFees,
+  OpenOceanRouteMeta,
+  PrivateSwapMode,
+  Provider,
+  QuoteRouteFees,
+} from "./common.js";
 import type { ProviderType } from "./discovery.js";
 import type { ErrorCode } from "./errors.js";
 
@@ -60,14 +67,34 @@ export interface QuoteRoute {
   /** The provider's integration type. */
   providerType: ProviderType;
 
-  /** Expected output in the destination token, as a human-readable decimal, after fees. */
+  /**
+   * Expected output in the destination token, as a human-readable decimal: after all fees, including
+   * `fees.breakdown.gas`. `additionalFee` is not taken from it, since the wallet pays that fee on top.
+   */
   expectedOutput: string;
 
   /** Estimated time to complete, in seconds. */
   estimatedTimeSeconds: number;
 
-  /** Fees for this route. */
-  fees: QuoteFees;
+  /**
+   * What this route costs, or `{}` when Pegaroute has no fee data for it (not a zero fee). Tell them apart with
+   * `hasQuoteRouteFees`.
+   *
+   * @example
+   * if (hasQuoteRouteFees(route.fees)) {
+   *   show(`$${route.fees.totalUsd} (${route.fees.totalBps} bps)`);
+   * }
+   */
+  fees: QuoteRouteFees | NoQuoteRouteFees;
+
+  /**
+   * A fee the wallet pays in the source chain's native coin, on top of the quoted amount and the source network gas, or
+   * `null` when there is none. Show it to the user next to the route's cost.
+   *
+   * On Squid routes this is the Axelar gas receiver fee; on an EVM chain the transaction `value` from `swaps.create`
+   * already includes it. Neither `expectedOutput` nor `fees` include it, but the route order does.
+   */
+  additionalFee: AdditionalFee | null;
 
   /** The provider's own quote expiry (ISO 8601 or Unix seconds), if it has one. Use the quote's `expiresAt` instead. */
   expiry: string | null;
@@ -86,12 +113,6 @@ export interface QuoteRoute {
 
   /** Minimum swap amount in the source token, as a human-readable decimal, if the provider has one. */
   minAmount: string | null;
-
-  /** The fee applied to this route after provider caps. */
-  resolvedFee: {
-    /** Effective fee in basis points. */
-    feeBps: number;
-  };
 
   /** OpenOcean aggregator behind the route (Solana/Sui only). */
   openOceanRoute?: OpenOceanRouteMeta;
@@ -124,7 +145,11 @@ export interface QuoteResponse {
   /** When the quote expires (ISO 8601). After that, `swaps.create` throws `QuoteExpiredError`. */
   expiresAt: string;
 
-  /** Available routes, best first: highest output, then fastest, then lowest slippage. */
+  /**
+   * Available routes, best first. Routes are ranked by `expectedOutput` minus `additionalFee`, then by speed. To
+   * subtract the fee, Pegaroute converts it to the output token at reference prices. If it has no reference price for
+   * either token, it ranks that route by `expectedOutput` alone.
+   */
   routes: QuoteRoute[];
 
   /** One entry per provider that was tried but didn't return a route. */
