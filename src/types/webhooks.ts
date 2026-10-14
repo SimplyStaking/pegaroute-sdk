@@ -1,4 +1,4 @@
-import type { QuoteFees, RefundInfo, RouteInfo, StreamingProgress } from "./common.js";
+import type { RefundInfo, RouteInfo, StreamingProgress } from "./common.js";
 import type { InternalSwapStatus, SwapStatus } from "./status.js";
 import type { SwapFailure, SwapInput, SwapOutput, SwapTimestamps } from "./swaps.js";
 
@@ -55,9 +55,6 @@ export interface TransactionWebhookData {
 
   /** The destination side of the swap. */
   output: SwapOutput;
-
-  /** Fees for the swap. */
-  fees: QuoteFees;
 
   /** When the swap reached each stage. */
   timestamps: SwapTimestamps;

@@ -30,35 +30,95 @@ export interface TokenAmount {
 }
 
 /**
- * Fees for a route, as human-readable decimal strings.
+ * A fee, in two forms: USD, and basis points of the swap's input USD value (100 bps = 1%).
  *
- * Amounts are in destination-asset units (THORChain/Maya), or in USD when `unit` is `"USD"` (Instaswap/Squid).
- * Read `total` for the full fee the user pays.
+ * @example
+ * { usd: "2.5", bps: 10 } // $2.50 on a $2,500 swap
  */
-export interface QuoteFees {
-  /** Pegaroute's affiliate fee. For Instaswap and Squid this excludes the integrator's share (see `subAffiliate`). */
-  affiliate: string;
+export interface FeeAmount {
+  /** Amount in USD, as a decimal string, e.g. `"2.7178"`. */
+  usd: string;
 
-  /** Liquidity and other route fees. On Squid this includes Squid's own platform share. */
-  liquidity: string;
+  /** The same amount in basis points of the input USD value. */
+  bps: number;
+}
 
-  /** Outbound gas fee on the destination chain (`"0"` when not applicable). */
-  outbound: string;
+/**
+ * What a route costs the user, in USD and in basis points of the input USD value.
+ *
+ * Pegaroute prices the input and output tokens once per quote request, so all routes of a quote use the same
+ * reference prices and compare directly. Source-chain gas that the wallet pays and the route's `additionalFee` are not
+ * included.
+ *
+ * Never negative. If `expectedOutput` is worth more than the input (the user gains on the swap), `totalUsd`, `totalBps`
+ * and every part of `breakdown` are `0` instead of negative. A `0` fee therefore doesn't say how much the user gains:
+ * if two routes both show `0`, one can still pay out more. Compare them by `expectedOutput`, not by fee.
+ */
+export interface QuoteRouteFees {
+  /** `totalUsd` in basis points of the input USD value. Never negative. */
+  totalBps: number;
 
-  /** Sum of `affiliate`, `liquidity`, `outbound` and `subAffiliate` (when present). */
-  total: string;
+  /** Cost of the swap in USD: input USD − `expectedOutput` USD. Never negative. */
+  totalUsd: string;
 
-  /** Present when all fee amounts are in USD instead of asset units. */
-  unit?: "USD";
+  /** The total split in three parts: `affiliate` + `route` + `gas` = total, in USD and in bps. */
+  breakdown: {
+    /** The fee that Pegaroute and the integrator receive. */
+    affiliate: FeeAmount;
 
-  /** The integrator's USD share, excluded from `affiliate` (Instaswap/Squid only). */
-  subAffiliate?: string;
+    /**
+     * All other costs: provider fees, price impact, spread, and the difference between the provider's price and the
+     * reference price.
+     *
+     * Can be negative. That happens when the provider offers a better rate than the reference price: the extra the
+     * user gets cancels out part of the affiliate and gas fees, so the total ends up below `affiliate` + `gas`. The
+     * three parts still add up to the total.
+     *
+     * @example
+     * // $1,000 in, $999.50 out: total $0.50, affiliate $1, gas $0 → route $0.50 − $1 − $0.
+     * // The provider's rate is $0.50 better than the reference price.
+     * { usd: "-0.5", bps: -5 }
+     */
+    route: FeeAmount;
 
-  /** Total provider-facing fee in basis points, when the provider reports it. */
-  totalBps?: number;
+    /**
+     * Gas the provider takes from the output (`expectedOutput` is already after it). On Instaswap private routes it
+     * also includes the zkproof protocol fee.
+     */
+    gas: FeeAmount;
+  };
+}
 
-  /** Slippage in basis points, when the provider reports it. */
-  slippageBps?: number;
+/**
+ * A route's `fees` when Pegaroute has no fee data for it, sent as `{}`: there is no reference price for the input or
+ * output token, or the provider's quote doesn't show the fee it applies. This is not a zero fee: don't show it as one.
+ */
+export type NoQuoteRouteFees = { [K in keyof QuoteRouteFees]?: never };
+
+/**
+ * Whether Pegaroute sent fee data for a route. `false` means `{}`: no fee data, not a zero fee.
+ *
+ * @example
+ * if (hasQuoteRouteFees(route.fees)) {
+ *   show(`$${route.fees.totalUsd} (${route.fees.totalBps} bps)`);
+ * }
+ */
+export function hasQuoteRouteFees(fees: QuoteRouteFees | NoQuoteRouteFees): fees is QuoteRouteFees {
+  return fees.totalUsd !== undefined;
+}
+
+/**
+ * A fee the wallet pays in the source chain's native coin, on top of the quoted amount and the source network gas.
+ *
+ * @example
+ * { token: "ETH", amount: "0.0004" } // a 0.1 ETH swap needs to send 0.1004 ETH
+ */
+export interface AdditionalFee {
+  /** Token ID of the source chain's native coin, as in `tokens.list(fromChain)`, e.g. `"ETH"`. */
+  token: string;
+
+  /** Fee amount, as a human-readable decimal, e.g. `"0.0004"`. */
+  amount: string;
 }
 
 /** How the affiliate fee on a swap was split between Pegaroute and the integrator, in basis points. */
@@ -122,9 +182,6 @@ export interface RouteInfo {
 
   /** Expected output amount in the destination token, as a human-readable decimal. */
   expectedOutput: string;
-
-  /** Fees for this route. */
-  fees: QuoteFees;
 
   /** Estimated time to complete, in seconds. */
   estimatedTimeSeconds: number;

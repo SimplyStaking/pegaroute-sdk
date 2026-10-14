@@ -4,6 +4,7 @@
  * change that isn't mirrored here fails `bun run typecheck`.
  */
 import type {
+  AdditionalFee,
   AffiliateFeeBreakdown,
   ChainsResponse,
   CosmosBankSendSwapExecution,
@@ -13,12 +14,14 @@ import type {
   EvmApproval,
   EvmSwapExecution,
   ExpectedAffiliateEntry,
+  FeeAmount,
   GetSwapResponse,
   HealthResponse,
   InstaswapFeeLine,
   InstaswapSwapLiteSnapshot,
   JsonSwapExecution,
   NamedDepositSwapExecution,
+  NoQuoteRouteFees,
   OpenOceanRouteMeta,
   OtherDepositSwapExecution,
   PingResponse,
@@ -27,9 +30,9 @@ import type {
   ProviderInfo,
   ProviderStatusInfo,
   ProvidersResponse,
-  QuoteFees,
   QuoteResponse,
   QuoteRoute,
+  QuoteRouteFees,
   RefundInfo,
   RouteInfo,
   RouteWarning,
@@ -60,17 +63,6 @@ import { type FieldShape, nullable, optional, type Shape } from "./assert-shape.
 
 const tokenAmountShape = { display: true, baseUnits: true } satisfies Shape<TokenAmount>;
 
-const quoteFeesShape = {
-  affiliate: true,
-  liquidity: true,
-  outbound: true,
-  total: true,
-  unit: optional(),
-  subAffiliate: optional(),
-  totalBps: optional(),
-  slippageBps: optional(),
-} satisfies Shape<QuoteFees>;
-
 const openOceanRouteShape = {
   dexId: optional(),
   dexCode: optional(),
@@ -82,7 +74,6 @@ const routeInfoShape = {
   subprovider: optional(),
   private: optional(),
   expectedOutput: true,
-  fees: quoteFeesShape,
   estimatedTimeSeconds: true,
   openOceanRoute: optional(openOceanRouteShape),
 } satisfies Shape<RouteInfo>;
@@ -179,6 +170,24 @@ export const healthResponseShape: FieldShape = {
 
 // ─── Quotes ───
 
+const feeAmountShape = { usd: true, bps: true } satisfies Shape<FeeAmount>;
+
+const quoteRouteFeesShape = {
+  totalBps: true,
+  totalUsd: true,
+  breakdown: { affiliate: feeAmountShape, route: feeAmountShape, gas: feeAmountShape },
+} satisfies Shape<QuoteRouteFees>;
+
+const additionalFeeShape = { token: true, amount: true } satisfies Shape<AdditionalFee>;
+
+/**
+ * A route's `fees`: all fields, or `{}` when Pegaroute has no fee data for the route. A partial object fails either
+ * way: its keys are undeclared in `{}`, or the full shape reports the missing ones.
+ */
+function routeFeesShape(fees: QuoteRouteFees | NoQuoteRouteFees): FieldShape {
+  return fees.totalUsd === undefined ? {} : quoteRouteFeesShape;
+}
+
 const quoteRouteShape = {
   provider: true,
   subprovider: optional(),
@@ -186,14 +195,14 @@ const quoteRouteShape = {
   providerType: true,
   expectedOutput: true,
   estimatedTimeSeconds: true,
-  fees: quoteFeesShape,
+  fees: routeFeesShape,
+  additionalFee: nullable(additionalFeeShape),
   expiry: nullable(),
   memo: nullable(),
   inboundAddress: nullable(),
   router: nullable(),
   gasRate: nullable(),
   minAmount: nullable(),
-  resolvedFee: { feeBps: true },
   openOceanRoute: optional(openOceanRouteShape),
 } satisfies Shape<QuoteRoute>;
 
@@ -408,7 +417,6 @@ export const getSwapResponseShape: FieldShape = {
   route: routeInfoShape,
   input: swapInputShape,
   output: swapOutputShape,
-  fees: quoteFeesShape,
   affiliateFeeBreakdown: optional(affiliateFeeBreakdownShape),
   timestamps: swapTimestampsShape,
   error: nullable(swapFailureShape),
@@ -448,7 +456,6 @@ const transactionShape = {
   source: swapInputShape,
   destination: swapOutputShape,
   route: routeInfoShape,
-  fees: quoteFeesShape,
   affiliateFeeBreakdown: optional(affiliateFeeBreakdownShape),
   error: optional(swapFailureShape),
   refund: optional(refundShape),
@@ -491,7 +498,6 @@ const transactionWebhookEventShape = {
       txHash: optional(),
     },
     output: swapOutputShape,
-    fees: quoteFeesShape,
     timestamps: swapTimestampsShape,
     error: nullable(swapFailureShape),
     refund: nullable(refundShape),
