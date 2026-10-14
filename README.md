@@ -20,7 +20,7 @@ frontend read it.
 ## Quote and swap (backend)
 
 ```ts
-import { type CreateSwapParams, Pegaroute } from "@pegaroute/sdk";
+import { type CreateSwapParams, hasQuoteRouteFees, Pegaroute } from "@pegaroute/sdk";
 
 const pr = new Pegaroute({ apiKey: process.env.PEGAROUTE_API_KEY!, baseUrl: process.env.PEGAROUTE_BASE_URL! });
 
@@ -39,11 +39,21 @@ const quote = await pr.quotes.get(params);
 const best = quote.routes[0];
 
 if (best) {
+  // Show the user what the route costs. `{}` means no fee data, not a zero fee.
+  if (hasQuoteRouteFees(best.fees)) showCost(`$${best.fees.totalUsd} (${best.fees.totalBps} bps)`);
+
+  // Some routes add a fee in the source chain's native coin, which the wallet pays on top of `amount`.
+  if (best.additionalFee) showExtraFee(`${best.additionalFee.amount} ${best.additionalFee.token}`);
+
   const swap = await pr.swaps.create({ ...params, quoteId: quote.quoteId, routeProvider: best.provider });
 
   // Send `swap.transactionId` and `swap.execution` to the frontend for signing.
 }
 ```
+
+`fees.totalUsd` is never negative. If the output is worth more than the input at reference prices, every fee is `0`,
+so two routes showing `0` can still pay out different amounts: compare routes by `expectedOutput`. Only
+`fees.breakdown.route` can be negative, when the provider's rate beats the reference price.
 
 ## Sign (frontend, EVM with viem)
 
