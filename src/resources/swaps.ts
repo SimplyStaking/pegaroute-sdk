@@ -79,6 +79,7 @@ export class Swaps {
       streaming: params.streaming,
       quoteId: params.quoteId,
       routeProvider: params.routeProvider,
+      userIp: params.userIp,
     };
 
     return this.#http.request({ method: "POST", path: "/swap", query, body }, options);

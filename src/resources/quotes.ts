@@ -31,6 +31,7 @@ export class Quotes {
       destinationAddress: params.destinationAddress,
       senderAddress: params.senderAddress,
       refundAddress: params.refundAddress,
+      userIp: params.userIp,
     };
 
     return this.#http.request({ method: "GET", path: "/quote", query }, options);

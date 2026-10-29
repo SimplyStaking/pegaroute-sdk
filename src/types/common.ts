@@ -1,5 +1,5 @@
 /** Providers Pegaroute is known to route through. Other names may appear as providers are added. */
-export type KnownProvider = "thorchain" | "maya" | "openocean" | "instaswap" | "squid";
+export type KnownProvider = "thorchain" | "maya" | "openocean" | "instaswap" | "squid" | "swapspace";
 
 /** Any provider name, including ones added after this SDK version. */
 export type Provider = KnownProvider | (string & {});
