@@ -61,6 +61,12 @@ export interface CreateSwapParams {
 
   /** Confidential execution mode. Must match the quote. */
   private?: PrivateSwapMode;
+
+  /**
+   * End-user IPv4 or IPv6 address. Providers that require it reject the build when it is missing
+   * or invalid. When a quote was used, use the same value that produced the quote.
+   */
+  userIp?: string;
 }
 
 /** The provider executing a swap, with its own reference for the swap. */

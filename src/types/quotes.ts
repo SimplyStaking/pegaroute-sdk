@@ -45,6 +45,12 @@ export interface GetQuoteParams {
    * are left out of `routes` and listed in `warnings`.
    */
   refundAddress?: string;
+
+  /**
+   * End-user IPv4 or IPv6 address, when the integration supplies one. Providers that require it
+   * are left out of `routes` when it is omitted or invalid. Supplying it may trigger additional KYC.
+   */
+  userIp?: string;
 }
 
 /**

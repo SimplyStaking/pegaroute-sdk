@@ -32,6 +32,9 @@ const params = {
   amount: "0.05",
   senderAddress: "0xabc…",
   destinationAddress: "bc1q…",
+  // Optional. Providers that require an end-user IP are omitted when it is absent.
+  // Supplying it may trigger additional KYC. Use the same value for the quote and the swap.
+  userIp: "203.0.113.7",
 } satisfies CreateSwapParams;
 
 // Routes are best first. No routes means no provider can quote the pair: see `quote.warnings`.
@@ -50,6 +53,8 @@ if (best) {
   // Send `swap.transactionId` and `swap.execution` to the frontend for signing.
 }
 ```
+
+`userIp` is optional. If your integration collects the end-user IP, pass it to both `quotes.get` and `swaps.create`. Providers that require it are omitted from `quote.routes` when it is absent or invalid.
 
 `fees.totalUsd` is never negative. If the output is worth more than the input at reference prices, every fee is `0`,
 so two routes showing `0` can still pay out different amounts: compare routes by `expectedOutput`. Only
