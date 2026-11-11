@@ -80,6 +80,7 @@ export class Swaps {
       quoteId: params.quoteId,
       routeProvider: params.routeProvider,
       userIp: params.userIp,
+      destinationMemo: params.destinationMemo,
     };
 
     return this.#http.request({ method: "POST", path: "/swap", query, body }, options);

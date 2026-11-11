@@ -56,6 +56,8 @@ if (best) {
 
 `userIp` is optional. If your integration collects the end-user IP, pass it to both `quotes.get` and `swaps.create`. Providers that require it are omitted from `quote.routes` when it is absent or invalid.
 
+`destinationMemo` is optional. Use it for a destination memo, tag, or payment ID when the receiving chain or service requires one. The live route field `destinationMemoLabel` gives the provider's label, such as `Memo`, `Tag`, or `Payment ID`. Pass the same value to `quotes.get` and `swaps.create`; changing it invalidates a bound quote. It is not part of `execution` and must not be added to the signed source transaction. A supplied value that the destination cannot accept returns `DESTINATION_MEMO_UNSUPPORTED`.
+
 `fees.totalUsd` is never negative. If the output is worth more than the input at reference prices, every fee is `0`,
 so two routes showing `0` can still pay out different amounts: compare routes by `expectedOutput`. Only
 `fees.breakdown.route` can be negative, when the provider's rate beats the reference price.

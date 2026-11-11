@@ -31,6 +31,50 @@ describe("userIp forwarding", () => {
     expect(new URL(calls[0]!.url).searchParams.get("userIp")).toBe("203.0.113.7");
   });
 
+  test("quotes.get sends destinationMemo in the query", async () => {
+    const calls: Array<{ url: string; init: RequestInit }> = [];
+    const pr = new Pegaroute({
+      apiKey: "test-key",
+      baseUrl: "https://api.test",
+      fetch: recordingFetch(calls),
+    });
+
+    await pr.quotes.get({
+      fromChain: "ETH",
+      fromToken: "ETH",
+      toChain: "CANTON",
+      toToken: "CC",
+      amount: "1",
+      destinationMemo: "payment-id-1",
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(new URL(calls[0]!.url).searchParams.get("destinationMemo")).toBe("payment-id-1");
+  });
+
+  test("swaps.create sends destinationMemo in the body", async () => {
+    const calls: Array<{ url: string; init: RequestInit }> = [];
+    const pr = new Pegaroute({
+      apiKey: "test-key",
+      baseUrl: "https://api.test",
+      fetch: recordingFetch(calls),
+    });
+
+    await pr.swaps.create({
+      fromChain: "ETH",
+      fromToken: "ETH",
+      toChain: "CANTON",
+      toToken: "CC",
+      amount: "1",
+      senderAddress: "0x2222222222222222222222222222222222222222",
+      destinationAddress: "canton-address",
+      destinationMemo: "payment-id-1",
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(JSON.parse(String(calls[0]!.init.body))).toMatchObject({ destinationMemo: "payment-id-1" });
+  });
+
   test("swaps.create sends userIp in the body", async () => {
     const calls: Array<{ url: string; init: RequestInit }> = [];
     const pr = new Pegaroute({

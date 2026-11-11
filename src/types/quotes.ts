@@ -51,6 +51,12 @@ export interface GetQuoteParams {
    * are left out of `routes` when it is omitted or invalid. Supplying it may trigger additional KYC.
    */
   userIp?: string;
+
+  /**
+   * Destination memo, tag, or payment ID, when the destination chain or receiving service requires one.
+   * Providers that cannot accept it are left out of `routes`. Pass the same value to `swaps.create`.
+   */
+  destinationMemo?: string;
 }
 
 /**
@@ -107,6 +113,12 @@ export interface QuoteRoute {
 
   /** Transaction memo (THORChain/Maya), if any. */
   memo: string | null;
+
+  /**
+   * Live label for an optional destination memo, such as `Memo`, `Tag`, or `Payment ID`.
+   * Present only when the destination supports one; label the optional input with this value.
+   */
+  destinationMemoLabel?: string;
 
   /** Vault address funds are sent to, if any. */
   inboundAddress: string | null;

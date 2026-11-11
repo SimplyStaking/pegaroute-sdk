@@ -199,6 +199,7 @@ const quoteRouteShape = {
   additionalFee: nullable(additionalFeeShape),
   expiry: nullable(),
   memo: nullable(),
+  destinationMemoLabel: optional(),
   inboundAddress: nullable(),
   router: nullable(),
   gasRate: nullable(),
