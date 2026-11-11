@@ -51,7 +51,7 @@ export interface TransactionWebhookData {
   route: Pick<RouteInfo, "provider" | "subprovider" | "private">;
 
   /** The source side of the swap (fewer fields than `swaps.get()`). */
-  input: Pick<SwapInput, "chain" | "token" | "amount" | "address" | "refundAddress" | "txHash">;
+  input: Pick<SwapInput, "chain" | "token" | "amount" | "address" | "refundAddress" | "txHash" | "providerStatus">;
 
   /** The destination side of the swap. */
   output: SwapOutput;
