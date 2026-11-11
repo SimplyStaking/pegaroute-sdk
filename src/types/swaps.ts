@@ -67,6 +67,9 @@ export interface CreateSwapParams {
    * or invalid. When a quote was used, use the same value that produced the quote.
    */
   userIp?: string;
+
+  /** Destination memo, tag, or payment ID. Must match the quote when one was used. */
+  destinationMemo?: string;
 }
 
 /** The provider executing a swap, with its own reference for the swap. */
