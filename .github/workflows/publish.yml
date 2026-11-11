@@ -1,0 +1,161 @@
+# Publishes @pegaroute/sdk to npm.
+#
+# Triggers:
+#   - a release tag is pushed (`v0.3.0`, `v0.4.0`, `v0.4.0-rc.1`, …): the normal release path
+#   - manual dispatch: the escape hatch for a version whose tag already exists (or for re-running
+#     after a failed publish); it publishes the version in package.json at the selected ref
+#
+# `ci.yml` gates every PR and push to main, but it is not a gate for tags, so the same checks run
+# again here on the exact commit being published: nothing reaches the registry unbuilt or untested.
+#
+# Auth: npm trusted publishing (OIDC) — no long-lived npm token is stored in the repo. One-time
+# setup by a package owner, on npmjs.com → @pegaroute/sdk → Settings → Trusted Publisher:
+#
+#   Provider:          GitHub Actions
+#   Organization:      SimplyStaking
+#   Repository:        pegaroute-sdk
+#   Workflow filename: publish.yml
+#
+# Those three values must match this file's path and name, or the OIDC exchange is rejected.
+# Provenance attestations are generated automatically by trusted publishing (needs `id-token: write`).
+#
+# Fallback, if trusted publishing is not an option: create an automation token, add it as the
+# `NPM_TOKEN` repository secret, and pass `NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}` to the
+# publish step (plus `--provenance` to keep attestations, which needs a public repo).
+name: Publish
+
+on:
+  push:
+    # GitHub ref filters are globs, not regexes, and `*` is "anything at all", so a bare `v*`
+    # would also fire for a tag literally named `version` (or `v`, `vendor`, `v1.2`). This glob
+    # keeps runs from starting for tags that cannot be a release; the strict SemVer check in
+    # "Verify version" is the gate that decides whether anything is actually published.
+    tags: ["v[0-9]*.[0-9]*.[0-9]*"]
+  workflow_dispatch:
+
+# Only the tag ref is needed; nothing is written back to the repo.
+permissions:
+  contents: read
+  # Required for the OIDC token that npm exchanges for a short-lived publish credential.
+  id-token: write
+
+# Never publish two versions at once, and never cancel a publish that is already talking to npm.
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # Same Bun version as local development (`packageManager` in package.json).
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      # npm CLI publishes; Bun builds. Trusted publishing needs Node >= 22.14 and npm >= 11.5.1 —
+      # newer than the repo's minimum (`.node-version`, 22.12.0) and the npm bundled with it — so
+      # the version is pinned here instead of coming from `.node-version`. It only runs `npm
+      # publish`, never the tests, so it does not widen what the SDK supports.
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Upgrade npm
+        run: npm install --global npm@^11
+
+      # Runs before the checks so a mistyped or already-released tag fails in seconds instead of
+      # after a full build. Guards both trigger paths: the tag (when there is one) must be `v` +
+      # a strict SemVer version, that version must be the one in package.json, and it must not
+      # already be on npm — a mismatch fails here rather than half-publishing or silently landing
+      # 0.3.0 on top of an older tag.
+      - name: Verify version
+        run: |
+          set -euo pipefail
+
+          # SemVer 2.0.0 as npm accepts it: no `v` prefix, no leading zeros, optional
+          # `-prerelease` and `+build` made of non-empty dot-separated identifiers. Rejects
+          # `0.3`, `0.03.0`, `1.2.3.4`, `v1.2.3`, `1.2.3-`, `1.2.3-rc..1`, `latest`.
+          semver='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
+
+          name="$(node -p "require('./package.json').name")"
+          version="$(node -p "require('./package.json').version")"
+
+          if ! printf '%s' "${version}" | grep -Eq "${semver}"; then
+            echo "::error::package.json version '${version}' is not a strict SemVer version."
+            exit 1
+          fi
+
+          echo "Package: ${name}@${version}"
+
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            tag="${GITHUB_REF_NAME}"
+
+            # The tag is `v` + the exact version, so pre-releases are tagged `v0.4.0-rc.1` and
+            # build metadata has to match too.
+            if [ "${tag}" != "v${version}" ]; then
+              # `version` starts with a `v` but is not a version, so classify by the body, not the
+              # prefix, to keep the message honest.
+              if printf '%s' "${tag#v}" | grep -Eq "${semver}"; then
+                echo "::error::Tag ${tag} does not match package.json version ${version}."
+                echo "Bump package.json on main, commit, then tag that commit as v${version}."
+              else
+                echo "::error::Tag ${tag} is not a v-prefixed SemVer tag; expected v${version}."
+              fi
+              exit 1
+            fi
+          fi
+
+          if npm view "${name}@${version}" version >/dev/null 2>&1; then
+            echo "::error::${name}@${version} is already published on npm; nothing to do."
+            echo "Bump the version in package.json and push a new tag instead."
+            exit 1
+          fi
+
+          echo "PKG_NAME=${name}" >> "$GITHUB_ENV"
+          echo "PKG_VERSION=${version}" >> "$GITHUB_ENV"
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Unit tests
+        run: bun test
+
+      # Builds (prepack), then publint and are-the-types-wrong: the exact tarball that would be
+      # published must resolve for ESM consumers and bundlers before we hand it to npm.
+      - name: Build and check package
+        run: bun run check:package
+
+      # `access: public` also comes from publishConfig in package.json; the flag makes it explicit.
+      # `prepack` (called by npm publish) rebuilds dist from the tagged sources.
+      - name: Publish
+        run: npm publish --access public
+
+      # The registry is eventually consistent, so poll briefly before calling the release good.
+      - name: Verify the published version
+        run: |
+          set -euo pipefail
+
+          for attempt in 1 2 3 4 5 6; do
+            published="$(npm view "${PKG_NAME}@${PKG_VERSION}" version 2>/dev/null || true)"
+            if [ "${published}" = "${PKG_VERSION}" ]; then
+              echo "Published ${PKG_NAME}@${PKG_VERSION}: https://www.npmjs.com/package/${PKG_NAME}/v/${PKG_VERSION}"
+              exit 0
+            fi
+            echo "Not visible on the registry yet (attempt ${attempt}/6), retrying…"
+            sleep 10
+          done
+
+          echo "::error::${PKG_NAME}@${PKG_VERSION} was not readable from npm after publish."
+          exit 1
