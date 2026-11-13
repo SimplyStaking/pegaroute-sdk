@@ -33,6 +33,7 @@ export class Quotes {
       refundAddress: params.refundAddress,
       userIp: params.userIp,
       destinationMemo: params.destinationMemo,
+      quoteTimeout: params.quoteTimeout,
     };
 
     return this.#http.request({ method: "GET", path: "/quote", query }, options);
