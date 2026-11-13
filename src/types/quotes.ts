@@ -57,6 +57,18 @@ export interface GetQuoteParams {
    * Providers that cannot accept it are left out of `routes`. Pass the same value to `swaps.create`.
    */
   destinationMemo?: string;
+
+  /**
+   * How long to collect provider quotes. Omitted or `0` waits for every provider.
+   *
+   * A positive value is a collection window in seconds; the full window is used, then pending
+   * providers are ignored when at least one quote arrived. A negative value waits for that many
+   * valid quotes before returning, so `-1` returns the first quote. Providers still pending when
+   * collection stops are reported in `warnings` with `QUOTE_TIMEOUT`.
+   *
+   * This is not the SDK's HTTP `timeoutMs`, which bounds the entire request.
+   */
+  quoteTimeout?: number;
 }
 
 /**
@@ -141,7 +153,7 @@ export interface RouteWarning {
   /** The provider that failed. Rarely empty, e.g. when no provider is enabled. */
   provider: string;
 
-  /** Same codes as API errors, e.g. `PROVIDER_TIMEOUT` or `UNSUPPORTED_PAIR`. */
+  /** Same codes as API errors, e.g. `PROVIDER_TIMEOUT`, `QUOTE_TIMEOUT`, or `UNSUPPORTED_PAIR`. */
   code: ErrorCode;
 
   /** Technical message for logs. */
