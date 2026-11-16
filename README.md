@@ -58,6 +58,8 @@ if (best) {
 
 `destinationMemo` is optional. Use it for a destination memo, tag, or payment ID when the receiving chain or service requires one. The live route field `destinationMemoLabel` gives the provider's label, such as `Memo`, `Tag`, or `Payment ID`. Pass the same value to `quotes.get` and `swaps.create`; changing it invalidates a bound quote. It is not part of `execution` and must not be added to the signed source transaction. A supplied value that the destination cannot accept returns `DESTINATION_MEMO_UNSUPPORTED`.
 
+`quoteTimeout` is optional on `quotes.get` only. Omit it or pass `0` to wait for every provider. A positive value is a quote-collection window in seconds; the full window is used, then pending providers are ignored if at least one quote arrived. A negative value waits for that many valid quotes before returning, so `-1` returns the first quote. Providers still pending when collection stops appear in `quote.warnings` with `QUOTE_TIMEOUT`. This is separate from the SDK client's HTTP `timeoutMs`, which bounds the whole request.
+
 `fees.totalUsd` is never negative. If the output is worth more than the input at reference prices, every fee is `0`,
 so two routes showing `0` can still pay out different amounts: compare routes by `expectedOutput`. Only
 `fees.breakdown.route` can be negative, when the provider's rate beats the reference price.

@@ -52,6 +52,29 @@ describe("userIp forwarding", () => {
     expect(new URL(calls[0]!.url).searchParams.get("destinationMemo")).toBe("payment-id-1");
   });
 
+  test("quotes.get sends quoteTimeout in the query", async () => {
+    const calls: Array<{ url: string; init: RequestInit }> = [];
+    const pr = new Pegaroute({
+      apiKey: "test-key",
+      baseUrl: "https://api.test",
+      fetch: recordingFetch(calls),
+    });
+
+    await pr.quotes.get({
+      fromChain: "ETH",
+      fromToken: "ETH",
+      toChain: "BTC",
+      toToken: "BTC",
+      amount: "1",
+      quoteTimeout: -1,
+    });
+
+    expect(calls).toHaveLength(1);
+    const [call] = calls;
+    if (!call) throw new Error("expected quotes.get to send a request");
+    expect(new URL(call.url).searchParams.get("quoteTimeout")).toBe("-1");
+  });
+
   test("swaps.create sends destinationMemo in the body", async () => {
     const calls: Array<{ url: string; init: RequestInit }> = [];
     const pr = new Pegaroute({
