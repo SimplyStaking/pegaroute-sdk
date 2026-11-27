@@ -174,10 +174,16 @@ export interface InstaswapSwapLiteSnapshot {
   /** Symbol of the token to deposit, e.g. `"BTC"`. */
   depositTokenSymbol?: string;
 
+  /**
+   * Memo or tag the deposit must carry, e.g. on Stellar. Instaswap does not credit the deposit without it. For
+   * display only: sign with `execution.memo`, which carries the same value. Omitted when the deposit needs no memo.
+   */
+  depositMemo?: string;
+
   /** When the deposit window closes (ISO 8601), if it does. */
   expiresAt?: string | null;
 
-  /** Deposit instructions to show the user. */
+  /** Deposit instructions to show the user. Display text only: never attach it to the transaction as a memo. */
   instructions?: string;
 }
 

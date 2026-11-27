@@ -368,6 +368,7 @@ const instaswapSwapLiteShape = {
   etaSeconds: optional(),
   depositAddress: true,
   depositTokenSymbol: optional(),
+  depositMemo: optional(),
   expiresAt: optional(nullable()),
   instructions: optional(),
 } satisfies Shape<InstaswapSwapLiteSnapshot>;
