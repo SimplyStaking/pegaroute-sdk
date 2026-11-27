@@ -44,7 +44,7 @@ export interface EvmSwapExecution {
   /** Suggested gas limit, if the provider supplies one. */
   gasLimit: string | null;
 
-  /** Opaque memo or deposit instructions, if any. */
+  /** Opaque on-chain memo, if any. */
   memo: string | null;
 
   /** ERC-20 approval required before a `contract-call`; `null` otherwise. */
